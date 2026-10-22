@@ -42,3 +42,13 @@ node --check demo/admin.js
 ```
 
 本项目没有构建步骤。演示覆盖主流程；产品文档中的关闭开关、字段缺值、故障等异常为产品规则与验收场景，前台演示没有逐项制作状态切换器。
+
+## 部署后看不到 WebMCP 工具
+
+上传静态文件只能让网页可访问，不能替访问者开启 Chrome 的实验性 WebMCP 接口。若 Inspector 显示 `You must run Chrome with the "WebMCP for testing" flag enabled`，这是 Inspector 在当前页面读不到 `document.modelContext` 时给出的错误，不是本站的服务器错误。
+
+**供开发者用 Inspector 演示：**在实际打开部署站点的同一个 Google Chrome 中访问 `chrome://version` 核对版本；[Inspector 项目要求 Chrome 150.0.7861.0 或更高，并启用测试开关](https://github.com/beaufortfrancois/model-context-tool-inspector#prerequisites)。进入 `chrome://flags/#enable-webmcp-testing`，设为 **Enabled**，点击 **Relaunch**，重新打开站点并刷新 Inspector。若开关不存在，先更新 Chrome；不要把服务器上的 Chrome 设置和访问者自己电脑上的 Chrome 混为一谈。
+
+**希望访问者不手动开测试开关：**按 [Chrome WebMCP 文档](https://developer.chrome.com/docs/ai/webmcp/)申请当前 HTTPS 域名的 WebMCP Origin Trial，并按照 [Origin Trial 接入说明](https://developer.chrome.com/docs/web-platform/origin-trials)把该域名的有效 token 放入每个需要使用工具的页面的 `Origin-Trial` 响应头，或放入该页面 `<head>` 的 `<meta http-equiv="origin-trial" content="实际申请的 TOKEN">`。本演示的工具在 `demo/index.html` 中运行，后台 `admin.html` 不注册工具。Token 需要与访问页面的 origin 匹配；不能把示例占位字符串直接上传。Inspector 本身仍是开发测试工具，应按其文档使用支持的 Chrome 与测试开关。
+
+在目标页面的 Chrome DevTools Console 输入 `typeof document.modelContext?.registerTool`：结果为 `"function"` 才说明当前页面有注册接口；结果为 `"undefined"` 时先检查浏览器版本、flag 或 Origin Trial token。若服务器使用非 localhost 的 HTTP 地址，先改为 HTTPS；WebMCP 接口要求安全上下文。接口可用后，本站产品列表页右上角应显示 `2 WebMCP tools ready`，详情页显示 3 项，询价页显示 1 项；“官网选择”页本来就没有工具。

@@ -14,6 +14,8 @@ python3 -m http.server 8765
 
 用支持 WebMCP 的 Chrome 打开 <http://localhost:8765/>。本地测试若未开放 WebMCP，在 `chrome://flags/#enable-webmcp-testing` 启用该功能并重启浏览器，再使用 **WebMCP - Model Context Tool Inspector**。右上角只有在实际 `registerTool` 成功后才显示工具数量；未启用时显示“WebMCP 未启用”。页面左侧始终可以手动切换，也可以让 Agent 在得到用户确认后调用导航工具。
 
+上传到服务器后的浏览器启用、Origin Trial 和 Inspector 报错排查，见[仓库 README 的部署说明](../README.md#部署后看不到-webmcp-工具)。
+
 Inspector 的聊天框和下方 **Tool / Input Arguments / Execute Tool** 是两种操作。聊天框已经找到产品，不代表下方手动执行框会自动填写真实参数。截图中 `"keyword":"example_string"` 是 Inspector 生成的占位值，直接点击 **Execute Tool** 就会搜索这个英文词，因此找不到管材。每个页面右侧的“手动执行 · Input Arguments”按当前 Tool 列出可复制的 JSON：先在 Inspector 选同名 Tool，再点“复制参数”，粘贴并执行。产品、表单或商品行变化后，页面会更新示例参数。
 
 ## 主流程：市政排水管材
