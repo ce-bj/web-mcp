@@ -6,6 +6,7 @@
 
 | 路径 | 内容 |
 | --- | --- |
+| [`index.html`](./index.html) | 前台演示的根目录入口，直接加载页面与 WebMCP 工具 |
 | [`webmcp-inquiry-product-design.md`](./webmcp-inquiry-product-design.md) | 产品设计：目标与边界、流程、后台配置、工具字段、异常和验收示例 |
 | [`webmcp-inquiry-product-design.assets/`](./webmcp-inquiry-product-design.assets/) | 产品文档引用的现有后台与表单截图 |
 | [`background/b2b-agent-ready-webmcp-standalone.html`](./background/b2b-agent-ready-webmcp-standalone.html) | 业务背景参考；本项目重点对应其中第 04 部分 |
@@ -22,10 +23,10 @@
 无需安装依赖。从仓库根目录运行：
 
 ```bash
-python3 -m http.server 8765 --directory demo
+python3 -m http.server 8765
 ```
 
-打开 [前台演示](http://localhost:8765/index.html?view=compare&site=pipe)。前台右上角的「后台配置」按钮可打开后台原型，也可以直接访问 [后台配置](http://localhost:8765/admin.html)。请通过 HTTP 服务访问，不要直接双击 HTML 文件；页面使用 ES modules 和 WebMCP 浏览器接口。
+打开 [项目首页](http://localhost:8765/)即可进入前台演示；也可以带参数访问，例如 `/?view=products&site=pipe`。前台右上角的「后台配置」按钮可打开后台原型，也可以直接访问 [后台配置](http://localhost:8765/demo/admin.html)。Nginx 部署时将网站根目录指向本仓库，直接返回根目录 `index.html` 即可；项目没有 Vite 构建步骤，也没有 `dist/index.html`。请通过 HTTP 服务访问，不要直接双击 HTML 文件；页面使用 ES modules 和 WebMCP 浏览器接口。
 
 前台两家官网及后台页面均为**模拟数据与原型**。后台设置保存在浏览器 `localStorage`，尚未连接真实中台，也不会实时改变前台工具。询价提交同样只写入浏览器本地存储，不发送给真实企业。产品文档描述的是中台应实现的业务规则，原型用于验证交互和当前页面工具定义；文档中的示意字段标识、截图商品与原型测试数据不必完全相同。
 
