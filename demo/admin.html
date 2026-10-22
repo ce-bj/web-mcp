@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebMCP 后台配置原型｜数字门户</title>
+  <link rel="stylesheet" href="./admin.css">
+  <script src="./admin.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">◈</div>
+      <strong class="brand">数字门户</strong>
+      <span class="brand-en">DIGITAL PORTAL</span>
+      <nav class="topnav" aria-label="主导航">
+        <span>概况</span><span class="topnav-current">网站管理</span><span>营销管理</span><span>客户管理</span><span>数据分析</span>
+      </nav>
+      <span class="prototype-tag">WebMCP 配置原型 · v0.x</span>
+    </header>
+
+    <aside class="primary-nav" aria-label="后台功能">
+      <div class="locale">🌐 <span>中文简体</span></div>
+      <button class="primary-item active" data-screen="template"><span class="nav-icon">▦</span> 产品管理</button>
+      <button class="primary-item" data-screen="form"><span class="nav-icon">▤</span> 表单管理</button>
+      <button class="primary-item" data-screen="product"><span class="nav-icon">◇</span> 产品编辑</button>
+      <div class="nav-divider"></div>
+      <div class="nav-muted"><span class="nav-icon">◷</span> 内容管理</div>
+      <div class="nav-muted"><span class="nav-icon">◉</span> SEO优化</div>
+      <div class="nav-muted"><span class="nav-icon">⚙</span> 网站设置</div>
+      <a class="front-link" href="./index.html?view=products&amp;site=pipe">↗ 查看前台演示</a>
+    </aside>
+
+    <aside class="secondary-nav" aria-label="当前模块菜单">
+      <div class="secondary-group" data-nav-group="template">
+        <div class="secondary-title">产品管理</div>
+        <button data-screen="product">产品列表</button>
+        <button>分类管理</button>
+        <button class="selected" data-screen="template">属性模板</button>
+        <button>标记管理</button>
+        <button>品牌管理</button>
+      </div>
+      <div class="secondary-group" data-nav-group="product" hidden>
+        <div class="secondary-title">产品管理</div>
+        <button class="selected" data-screen="product">产品列表</button>
+        <button>分类管理</button>
+        <button data-screen="template">属性模板</button>
+      </div>
+      <div class="secondary-group" data-nav-group="form" hidden>
+        <div class="secondary-title">表单管理</div>
+        <button>在线留言</button>
+        <button class="selected" data-screen="form">在线询价</button>
+        <button>意向信息</button>
+      </div>
+    </aside>
+
+    <main class="workspace" id="workspace">
+      <section class="screen active-screen" id="screen-template" aria-labelledby="template-title">
+        <div class="breadcrumb">首页 <span>›</span> 网站管理 <span>›</span> 产品管理 <span>›</span> 属性模板 <span>›</span> <strong>双壁波纹管</strong></div>
+        <div class="page-header">
+          <div><p class="eyebrow">PRODUCT ATTRIBUTE TEMPLATE</p><h1 id="template-title">双壁波纹管 · 属性模板</h1><p>产品字段仍在原属性项维护；WebMCP 只增加必要的开放设置。</p></div>
+          <div class="header-actions"><span class="status"><i></i> 已发布模板</span><button class="button button-primary" data-save>保存配置</button></div>
+        </div>
+        <div class="content-card template-card">
+          <div class="tabbar" role="tablist" aria-label="属性模板设置">
+            <button role="tab" aria-selected="false" data-template-tab="attributes">产品属性</button>
+            <button role="tab" aria-selected="false" data-template-tab="params">产品参数</button>
+            <button role="tab" aria-selected="false" data-template-tab="types">规格类型</button>
+            <button role="tab" aria-selected="false" data-template-tab="buttons">扩展按钮</button>
+            <button role="tab" aria-selected="false" data-template-tab="details">扩展详情页签</button>
+            <button role="tab" aria-selected="true" data-template-tab="webmcp">WebMCP <span class="new-dot"></span></button>
+          </div>
+
+          <div class="template-panel" data-template-panel="webmcp">
+            <div class="section-topline"><div><h2>产品 WebMCP</h2><p>此模板关联的产品继承以下工具设置。产品实际值仍在产品编辑页维护。</p></div><span class="pill pill-blue">模板级配置</span></div>
+            <div class="setting-row">
+              <div><strong>启用产品 WebMCP</strong><p>启用后，官网相关产品页按当前模板与产品值提供查询工具。</p></div>
+              <label class="switch"><input id="template-enabled" type="checkbox" data-persist checked aria-label="启用产品 WebMCP"><span></span></label>
+            </div>
+            <div id="template-tools">
+              <div class="two-column">
+                <article class="tool-card">
+                  <div class="tool-heading"><span class="tool-number">01</span><div><h3>规格查询工具</h3><p>读取当前产品已开放的规格及采购资料</p></div></div>
+                  <label>工具名称 <span class="readonly-note">系统生成 · 只读</span><input value="get_product_spec" readonly></label>
+                  <label>工具用途说明 <textarea id="spec-description" rows="3" data-persist>查询当前产品的规格及采购资料。</textarea></label>
+                </article>
+                <article class="tool-card">
+                  <div class="tool-heading"><span class="tool-number">02</span><div><h3>交期查询工具</h3><p>读取当前产品绑定的交货期属性</p></div></div>
+                  <label>工具名称 <span class="readonly-note">系统生成 · 只读</span><input value="check_lead_time" readonly></label>
+                  <label>工具用途说明 <textarea id="lead-description" rows="3" data-persist>查询当前产品的交货期。</textarea></label>
+                </article>
+              </div>
+              <div class="inline-note"><span>i</span><p>字段是否可查询，请到「产品属性」或「产品参数」中编辑对应属性。这里不重复列属性，也不填写产品值。</p><button class="text-button" data-template-tab="attributes">前往产品属性 →</button></div>
+            </div>
+            <div class="disabled-panel" id="template-disabled" hidden><strong>产品 WebMCP 已关闭</strong><p>此模板关联产品不提供规格与交期查询工具。已有属性和产品资料保持原状。</p></div>
+          </div>
+
+          <div class="template-panel" data-template-panel="attributes" hidden>
+            <div class="section-topline"><div><h2>产品属性</h2><p>沿用原有属性列表。在每个属性的原编辑窗口中增加「WebMCP 可查询」。</p></div><button class="button button-secondary" id="attr-help">+ 添加属性项</button></div>
+            <div class="table-scroll">
+              <table class="data-table attribute-table">
+                <thead><tr><th>属性名</th><th>类型</th><th>单位</th><th>搜索</th><th>显示状态</th><th>WebMCP 可查询 <span class="new-dot"></span></th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr data-attr="productName"><td><strong>产品名称</strong><small>productName</small></td><td>txt</td><td>—</td><td>可被搜索</td><td><span class="visible-tag">显示</span></td><td><span class="query-state">开放</span></td><td><button class="link-button attr-edit">编辑</button></td></tr>
+                  <tr data-attr="model"><td><strong>型号</strong><small>model</small></td><td>txt</td><td>—</td><td>可被搜索</td><td><span class="visible-tag">显示</span></td><td><span class="query-state">开放</span></td><td><button class="link-button attr-edit">编辑</button></td></tr>
+                  <tr data-attr="nominalDiameter"><td><strong>公称直径</strong><small>nominalDiameter</small></td><td>txt</td><td>mm</td><td>可被搜索</td><td><span class="visible-tag">显示</span></td><td><span class="query-state">开放</span></td><td><button class="link-button attr-edit">编辑</button></td></tr>
+                  <tr data-attr="ringStiffness"><td><strong>环刚度</strong><small>ringStiffness</small></td><td>txt</td><td>—</td><td>可被搜索</td><td><span class="visible-tag">显示</span></td><td><span class="query-state">开放</span></td><td><button class="link-button attr-edit">编辑</button></td></tr>
+                  <tr data-attr="standard"><td><strong>执行标准</strong><small>standard</small></td><td>txt</td><td>—</td><td>—</td><td><span class="visible-tag">显示</span></td><td><span class="query-state">开放</span></td><td><button class="link-button attr-edit">编辑</button></td></tr>
+                  <tr data-attr="material"><td><strong>材质</strong><small>material</small></td><td>txt</td><td>—</td><td>可被搜索</td><td><span class="visible-tag">显示</span></td><td><span class="query-state">开放</span></td><td><button class="link-button attr-edit">编辑</button></td></tr>
+                  <tr data-attr="leadTime"><td><strong>交货期</strong><small>leadTime</small></td><td>txt</td><td>—</td><td>—</td><td><span class="visible-tag">显示</span></td><td><span class="query-state">开放</span></td><td><button class="link-button attr-edit">编辑</button></td></tr>
+                  <tr data-attr="testReport"><td><strong>第三方检测报告</strong><small>testReport</small></td><td>file</td><td>—</td><td>—</td><td><span class="visible-tag">显示</span></td><td><span class="query-state off">未开放</span></td><td><button class="link-button attr-edit">编辑</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-note">默认建议沿用原公开显示状态；运营可逐项调整。属性类型、名称、单位等仍由原属性编辑功能维护。</div>
+          </div>
+          <div class="template-panel placeholder-panel" data-template-panel="params" hidden><h2>产品参数</h2><p>原有参数列表保持现状。编辑参数时，同样提供「WebMCP 可查询」开关。</p><button class="button button-secondary" data-template-tab="attributes">查看属性编辑示例</button></div>
+          <div class="template-panel placeholder-panel" data-template-panel="types" hidden><h2>规格类型</h2><p>该原有设置不需要增加 WebMCP 配置。</p></div>
+          <div class="template-panel placeholder-panel" data-template-panel="buttons" hidden><h2>扩展按钮</h2><p>询价沿用产品详情页的原有按钮和目标表单，不在这里再绑定一套。</p></div>
+          <div class="template-panel placeholder-panel" data-template-panel="details" hidden><h2>扩展详情页签</h2><p>该原有设置不需要增加 WebMCP 配置。</p></div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-product" aria-labelledby="product-title" hidden>
+        <div class="breadcrumb">首页 <span>›</span> 网站管理 <span>›</span> 产品管理 <span>›</span> 产品列表 <span>›</span> <strong>编辑产品</strong></div>
+        <div class="page-header"><div><p class="eyebrow">PRODUCT EDITOR</p><h1 id="product-title">编辑产品资料</h1><p>这里填写每个产品自己的值，继承所属属性模板的 WebMCP 配置。</p></div><div class="header-actions"><span class="status"><i></i> 已发布</span><button class="button button-primary" data-save>保存产品</button></div></div>
+        <div class="content-card product-editor">
+          <div class="product-heading"><div class="product-thumb">∿</div><div><strong>HDPE 双壁波纹管 DN315 / SN8</strong><p>属性模板：双壁波纹管 <button class="link-button" data-screen="template">查看模板配置 →</button></p></div></div>
+          <div class="form-grid">
+            <label>产品名称<input id="product-name" data-persist value="HDPE 双壁波纹管 DN315 / SN8"></label>
+            <label>产品型号<input id="product-model" data-persist value="CC-HDPE-DN315-SN8"></label>
+            <label>公称直径<input id="product-diameter" data-persist value="DN315"></label>
+            <label>环刚度<input id="product-stiffness" data-persist value="SN8"></label>
+            <label>执行标准<input id="product-standard" data-persist value="GB/T 19472.1"></label>
+            <label>材质<input id="product-material" data-persist value="HDPE"></label>
+            <label>交货期<input id="product-lead" data-persist value="预计 18 个工作日"><small>交期工具读取此值；不代表本次数量和目标日期已确认。</small></label>
+            <label>第三方检测报告<input id="product-report" data-persist value="" placeholder="尚未维护文件"><small>该属性当前未开放给 WebMCP 查询。</small></label>
+          </div>
+          <div class="inline-note"><span>i</span><p>本页不再设置产品 WebMCP 总开关或逐字段开放状态。缺值在这里补充；字段含义或开放状态在属性模板的原属性项中调整。</p></div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-form" aria-labelledby="form-title" hidden>
+        <div class="breadcrumb">首页 <span>›</span> 网站管理 <span>›</span> 表单管理 <span>›</span> 在线询价 <span>›</span> <strong>表单设置</strong></div>
+        <div class="page-header"><div><p class="eyebrow">FORM BUILDER</p><h1 id="form-title">在线询价 · 表单设置</h1><p>沿用现有表单页面与字段，在设置面板中新增独立的 WebMCP Tab。</p></div><div class="header-actions"><span class="status"><i></i> 已发布表单</span><button class="button button-primary" data-save>保存表单</button></div></div>
+        <div class="builder">
+          <div class="builder-canvas">
+            <div class="canvas-toolbar"><span><strong>在线询价</strong> / 页面预览</span><span class="canvas-mode">模块编辑　　设计　　智能匹配</span></div>
+            <div class="form-preview">
+              <div class="preview-selection"><span>表单容器</span>　在线询价</div>
+              <div class="preview-lines"><div class="preview-table-head"><span>商品名称</span><span>期望价格</span><span>预订数量</span><span>操作</span></div><div class="preview-table-body"><span class="preview-product">HDPE 双壁波纹管 DN315 / SN8　⌄</span><span class="preview-input">请输入期望价格</span><span class="preview-input">请输入预订数量</span><span class="preview-link">移除</span></div></div>
+              <button class="add-row-preview">添加一行</button>
+              <div class="preview-separator"></div>
+              <label>姓名 <em>*</em><input placeholder="请输入姓名" readonly></label>
+              <label>手机 <em>*</em><input placeholder="请输入手机号" readonly></label>
+              <label>邮箱 <em>*</em><input placeholder="请输入邮箱" readonly></label>
+              <label>询价内容 <em>*</em><textarea placeholder="请输入询价内容" readonly></textarea></label>
+              <button class="preview-submit" type="button">提交询价</button>
+            </div>
+          </div>
+          <aside class="settings-panel" aria-label="表单设置面板">
+            <div class="settings-head"><strong>数据编辑</strong><span>表单容器 / 在线询价</span></div>
+            <div class="settings-layout">
+              <div class="settings-tabs" role="tablist" aria-label="表单设置项目">
+                <button role="tab" aria-selected="false" data-form-tab="basic">表单设置</button>
+                <button role="tab" aria-selected="false" data-form-tab="rules">表单规则</button>
+                <button role="tab" aria-selected="false" data-form-tab="limits">提交限制</button>
+                <button role="tab" aria-selected="false" data-form-tab="sync">数据同步</button>
+                <button role="tab" aria-selected="false" data-form-tab="notify">表单通知</button>
+                <button role="tab" aria-selected="true" data-form-tab="webmcp">WebMCP <span class="new-dot"></span></button>
+              </div>
+              <div class="settings-content">
+                <div data-form-panel="webmcp">
+                  <div class="settings-section-head"><div><h2>WebMCP</h2><p>让 Agent 理解并预填本表单</p></div><span class="pill pill-blue">新增</span></div>
+                  <div class="setting-row compact"><div><strong>启用 WebMCP</strong><p>启用后，前台实际打开此表单时提供填写工具。本演示表单已启用；新建表单默认关闭。</p></div><label class="switch"><input id="form-enabled" type="checkbox" data-persist checked aria-label="启用表单 WebMCP"><span></span></label></div>
+                  <div id="form-config">
+                    <div class="field-section-title"><div><h3>字段描述</h3><p>按现有字段名与占位文字生成；只编辑第三列。</p></div><span>7 个字段</span></div>
+                    <div class="field-table-wrap"><table class="field-table"><thead><tr><th>字段名称</th><th>占位文字</th><th>WebMCP 描述 <span class="editable-mark">可编辑</span></th></tr></thead><tbody>
+                      <tr><td>相关项<small>商品子表 · 可编辑时</small></td><td class="muted">无</td><td><textarea id="desc-related" aria-label="相关项 WebMCP 描述" data-persist data-default="相关项" rows="2">相关项</textarea></td></tr>
+                      <tr><td>期望价格<small>商品子表</small></td><td>请输入期望价格</td><td><textarea id="desc-price" aria-label="期望价格 WebMCP 描述" data-persist data-default="期望价格：请输入期望价格" rows="2">期望价格：请输入期望价格</textarea></td></tr>
+                      <tr><td>预订数量<small>商品子表</small></td><td>请输入预订数量</td><td><textarea id="desc-quantity" aria-label="预订数量 WebMCP 描述" data-persist data-default="预订数量：请输入预订数量" rows="2">预订数量：请输入预订数量</textarea></td></tr>
+                      <tr><td>姓名</td><td>请输入姓名</td><td><textarea id="desc-name" aria-label="姓名 WebMCP 描述" data-persist data-default="姓名：请输入姓名" rows="2">姓名：请输入姓名</textarea></td></tr>
+                      <tr><td>手机</td><td>请输入手机号</td><td><textarea id="desc-phone" aria-label="手机 WebMCP 描述" data-persist data-default="手机：请输入手机号" rows="2">手机：请输入手机号</textarea></td></tr>
+                      <tr><td>邮箱</td><td>请输入邮箱</td><td><textarea id="desc-email" aria-label="邮箱 WebMCP 描述" data-persist data-default="邮箱：请输入邮箱" rows="2">邮箱：请输入邮箱</textarea></td></tr>
+                      <tr><td>询价内容</td><td>请输入询价内容</td><td><textarea id="desc-content" aria-label="询价内容 WebMCP 描述" data-persist data-default="询价内容：请输入询价内容" rows="2">询价内容：请输入询价内容</textarea></td></tr>
+                    </tbody></table></div>
+                    <div class="field-actions"><button class="text-button" id="reset-descriptions">恢复默认描述</button><span>只更新工具参数 description，不改变前台占位文字。</span></div>
+                    <div class="inline-note form-note"><span>i</span><p>字段类型、必填、选项、校验和商品行仍读取原表单定义；提交由用户在原页面完成。这里不额外配置工具名称、参数类型或提交动作。</p></div>
+                  </div>
+                  <div class="disabled-panel" id="form-disabled" hidden><strong>表单 WebMCP 已关闭</strong><p>开启后才显示字段描述表格。原表单仍可供用户正常填写与提交。</p></div>
+                </div>
+                <div class="existing-panel" data-form-panel="basic" hidden><h2>表单设置</h2><label>所属应用<input value="在线询价" readonly></label><label>表单名称<input value="在线询价" readonly></label><label>表单英文名<input value="Inquirys" readonly></label><p>以上为原有设置示意。WebMCP 配置已移到独立 Tab。</p></div>
+                <div class="existing-panel" data-form-panel="rules" hidden><h2>表单规则</h2><p>沿用现有表单规则；WebMCP 不增加另一套必填或校验配置。</p></div>
+                <div class="existing-panel" data-form-panel="limits" hidden><h2>提交限制</h2><p>沿用现有提交限制。</p></div>
+                <div class="existing-panel" data-form-panel="sync" hidden><h2>数据同步</h2><p>沿用现有数据同步设置。</p></div>
+                <div class="existing-panel" data-form-panel="notify" hidden><h2>表单通知</h2><p>沿用现有表单通知设置。</p></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+      <p class="prototype-foot">可交互产品原型 · 设置仅保存在当前浏览器，不连接真实后台</p>
+    </main>
+  </div>
+
+  <dialog id="attribute-dialog" aria-labelledby="dialog-title">
+    <form method="dialog" id="attribute-form">
+      <div class="dialog-head"><div><p class="eyebrow">ATTRIBUTE EDITOR</p><h2 id="dialog-title">编辑属性</h2></div><button class="dialog-close" value="cancel" aria-label="关闭">×</button></div>
+      <label>属性名称<input id="dialog-name" readonly></label>
+      <label>字段标识<input id="dialog-key" readonly></label>
+      <div class="dialog-original"><strong>原属性设置</strong><p>类型、单位、搜索及显示状态仍在现有编辑功能中维护。</p></div>
+      <div class="dialog-toggle"><div><strong>WebMCP 可查询 <span class="pill pill-blue">新增</span></strong><p>开启后，该属性的当前产品值可进入官网页面工具结果；仍需满足访问权限。</p></div><label class="switch"><input type="checkbox" id="dialog-query" aria-label="WebMCP 可查询"><span></span></label></div>
+      <div class="dialog-actions"><button class="button button-secondary" value="cancel">取消</button><button class="button button-primary" id="dialog-confirm" value="default">确定</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
