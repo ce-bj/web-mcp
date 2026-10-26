@@ -359,7 +359,13 @@ async function registerTools(){
   const badge=$('#tool-badge');
   const definitions=toolDefinitions();
   if(!definitions.length){badge.className='tool-badge neutral';badge.innerHTML='<span class="badge-dot"></span>发现与理解 · 0 tools';return;}
-  if(!document.modelContext?.registerTool){badge.className='tool-badge unsupported';badge.innerHTML='<span class="badge-dot"></span>WebMCP 未启用';badge.title='请在支持 WebMCP 的 Chrome 中启用 chrome://flags/#enable-webmcp-testing 后重新打开 localhost 页面。';return;}
+  if(!document.modelContext?.registerTool){
+    const insecureNetworkHttp=location.protocol==='http:'&&!['localhost','127.0.0.1','[::1]'].includes(location.hostname);
+    badge.className='tool-badge unsupported';
+    badge.innerHTML=`<span class="badge-dot"></span>${insecureNetworkHttp?'需要 HTTPS 才能启用 WebMCP':'WebMCP 未启用'}`;
+    badge.title=insecureNetworkHttp?'当前使用非 localhost 的 HTTP 地址。请通过受信任的 HTTPS 地址访问，再检查 Chrome WebMCP 测试开关或 Origin Trial。':'请检查 Chrome WebMCP 测试开关或当前站点的 Origin Trial。';
+    return;
+  }
   const controller=new AbortController();toolController=controller;
   badge.className='tool-badge pending';badge.innerHTML='<span class="pulse"></span>注册工具中…';
   try{
