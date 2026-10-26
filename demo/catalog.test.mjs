@@ -53,4 +53,7 @@ test('手动调用参数覆盖当前页工具并跟随表单行变化',()=>{
   assert.equal(bearing.args.quantity,200);
   assert.equal(bearing.args.items,undefined);
   assert.ok(quoteSchema(formDefinitions.bearing).required.every(key=>bearing.args[key]!==undefined));
+  const submit=manualExamplesForPage({view:'quote',siteKey:'pipe',product:pipe,form:formDefinitions.pipe,rows})[1];
+  assert.equal(submit.name,'submit_quote');
+  assert.deepEqual(submit.args,{});
 });

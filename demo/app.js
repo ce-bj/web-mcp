@@ -1,5 +1,6 @@
 import {sites,formDefinitions,publicProducts,getProduct,fieldDescription,availableAttrKeys,specSchema,quoteSchema,searchCatalog} from './catalog.js';
 import {manualExamplesForPage} from './manual-examples.js';
+import {saveDemoInquiry} from './submission.js';
 
 const $=selector=>document.querySelector(selector);
 const params=new URLSearchParams(location.search);
@@ -20,6 +21,8 @@ let registered=[];
 let registerSerial=0;
 let selectedSearchProductId;
 let currentManualExamples=[];
+let lastSubmission=null;
+const inquiryStorage={getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)};
 
 function icon(name){
   const paths={search:'<circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/>',arrow:'<path d="M4 12h16m-6-6 6 6-6 6"/>',check:'<path d="m4 12 5 5L20 6"/>',box:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>',doc:'<path d="M6 2h8l4 4v16H6zM14 2v5h4M9 12h6M9 16h6"/>',send:'<path d="m3 11 18-8-8 18-2-8-8-2zM11 13l10-10"/>',external:'<path d="M14 3h7v7M10 14 21 3M20 14v7H3V4h7"/>',chevron:'<path d="m9 6 6 6-6 6"/>',layers:'<rect x="4" y="4" width="13" height="13" rx="2"/><path d="M8 20h12V8"/>'};
@@ -39,12 +42,12 @@ function renderShell(){
       <div class="nav-group"><p><span class="nav-dot pipe-dot"></span> 澄川管业</p>
         ${navItem('所有产品',pageUrl('products','pipe'),route.view==='products'&&route.site==='pipe','search_products')}
         ${navItem('产品详情',pageUrl('detail','pipe','pipe-315'),route.view==='detail'&&route.site==='pipe','规格 · 交期')}
-        ${navItem('在线询价',pageUrl('quote','pipe','pipe-315'),route.view==='quote'&&route.site==='pipe','request_quote')}
+        ${navItem('在线询价',pageUrl('quote','pipe','pipe-315'),route.view==='quote'&&route.site==='pipe','预填 · 提交')}
       </div>
       <div class="nav-group"><p><span class="nav-dot bearing-dot"></span> 衡星精密</p>
         ${navItem('所有产品',pageUrl('products','bearing'),route.view==='products'&&route.site==='bearing','search_products')}
         ${navItem('产品详情',pageUrl('detail','bearing','bearing-6205'),route.view==='detail'&&route.site==='bearing','规格 · 交期')}
-        ${navItem('产品询价',pageUrl('quote','bearing','bearing-6205'),route.view==='quote'&&route.site==='bearing','request_quote')}
+        ${navItem('产品询价',pageUrl('quote','bearing','bearing-6205'),route.view==='quote'&&route.site==='bearing','预填 · 提交')}
       </div>
       <div class="sidebar-bottom"><span class="mini-label">测试方式</span><p>在 Chrome 中打开本页，使用 Model Context Tool Inspector 对当前页提问。</p><a href="${demoFileUrl('README.md')}" target="_blank" rel="noopener">查看测试脚本 ${icon('arrow')}</a></div>
     </aside>
@@ -69,7 +72,7 @@ const prompts={
   ],
   quote:[
     '这款产品要 1200 米，项目在江苏，希望 12 月中旬发货。联系人王宁，手机 13800138000，邮箱 wang.ning@example.com。也请对方确认第三方检测报告。',
-    '我先看看填写的内容，确认后自己提交。'
+    '我已经核对表单，信息无误。请提交这份询价，并告诉我回执编号。'
   ]
 };
 const bearingPrompts={
@@ -84,12 +87,12 @@ const bearingPrompts={
   ],
   quote:[
     '我要采购这款轴承 200 件。联系人李工，工作邮箱 ligong@example.com，用于电机，请对方确认批量价格与交货期。',
-    '我先核对一下，之后自己提交。'
+    '我已经核对表单，信息无误。请提交这份询价，并告诉我回执编号。'
   ]
 };
 function promptPanel(view){
   const list=(route.site==='bearing'&&bearingPrompts[view]?bearingPrompts[view]:prompts[view]).map((p,i)=>`<div class="prompt-item"><span>${String(i+1).padStart(2,'0')}</span><p>${e(p)}</p><button type="button" class="copy-prompt" data-text="${e(p)}" aria-label="复制第 ${i+1} 条提问">复制</button></div>`).join('');
-  const intro={compare:'用自然语言比较官网简介；此页没有 WebMCP 工具。',products:'像采购用户一样提问。Agent 找到产品后询问是否打开；您确认后页面自动跳转。',detail:'继续问规格与交期；表达询价意向后，Agent 可打开原表单。',quote:'提供采购数量和联系信息；Agent 只预填表单，最终由您核对提交。'}[view];
+  const intro={compare:'用自然语言比较官网简介；此页没有 WebMCP 工具。',products:'像采购用户一样提问。Agent 找到产品后询问是否打开；您确认后页面自动跳转。',detail:'继续问规格与交期；表达询价意向后，Agent 可打开原表单。',quote:'先让 Agent 预填表单；您核对后可自行点击提交，或明确授权 Agent 调用 submit_quote，页面会再次请您确认。'}[view];
   return `<aside class="prompt-panel" aria-labelledby="prompt-title"><div class="panel-heading"><div><span class="eyebrow">MODEL CONTEXT TOOL INSPECTOR</span><h2 id="prompt-title">本页提问脚本</h2></div>${icon('doc')}</div><p class="panel-intro">${intro}</p>${list}${manualMarkup()}<div class="panel-foot">工具只在当前页面注册。跳转后请在 Inspector 中重新读取当前页工具。</div></aside>`;
 }
 function manualMarkup(){
@@ -97,7 +100,7 @@ function manualMarkup(){
   if(!currentManualExamples.length)return '';
   const cards=currentManualExamples.map((example,index)=>{
     const json=example.args===null?'':JSON.stringify(example.args,null,2);
-    return `<div class="manual-card"><div class="manual-card-head"><code>${e(example.name)}</code>${example.args!==null?`<button type="button" class="copy-args" data-example-index="${index}" aria-label="复制 ${e(example.name)} 的 Input Arguments">复制参数</button>`:''}</div><p>${e(example.purpose)}</p>${example.args===null?`<p class="manual-unavailable">${e(example.note)}</p>`:`<pre>${e(json)}</pre>`}</div>`;
+    return `<div class="manual-card"><div class="manual-card-head"><code>${e(example.name)}</code>${example.args!==null?`<button type="button" class="copy-args" data-example-index="${index}" aria-label="复制 ${e(example.name)} 的 Input Arguments">复制参数</button>`:''}</div><p>${e(example.purpose)}</p>${example.note?`<p class="manual-unavailable">${e(example.note)}</p>`:''}${example.args!==null?`<pre>${e(json)}</pre>`:''}</div>`;
   }).join('');
   return `<section class="manual-tools" id="manual-examples" aria-labelledby="manual-title"><h3 id="manual-title">手动执行 · Input Arguments</h3><p>在 Inspector 选择对应 Tool，再复制下方 JSON 粘贴到 Input Arguments。<code>example_string</code> 只是插件占位值。</p>${cards}</section>`;
 }
@@ -187,12 +190,12 @@ function renderQuote(){
   $('#main').innerHTML=`<div class="page-grid"><div class="content-column">
     <div class="site-identity"><span class="brand-square">${site.initials}</span><div><span>${e(site.english)}</span><strong>${e(site.name)}</strong></div><small>${e(site.location)}</small></div>
     <nav class="breadcrumb" aria-label="面包屑"><a href="${pageUrl('products')}">所有产品</a>${icon('chevron')}<a href="${pageUrl('detail',route.site,product.id)}">${e(product.name)}</a>${icon('chevron')}<strong>${e(form.title)}</strong></nav>
-    <div class="page-title quote-title"><span class="eyebrow">REQUEST FOR QUOTATION / 询价</span><h1>${e(form.title)}</h1><p>请填写采购需求和联系方式。页面可由 Agent 辅助预填，最终提交由您核对后亲自完成。</p></div>
+    <div class="page-title quote-title"><span class="eyebrow">REQUEST FOR QUOTATION / 询价</span><h1>${e(form.title)}</h1><p>请填写采购需求和联系方式。Agent 可以辅助预填；核对后您可以点击提交，或授权 Agent 提交并取得回执。</p></div>
     <form id="quote-form" novalidate>${quoteItem}<section class="contact-section"><div class="section-head"><div><span class="eyebrow">CONTACT & REQUIREMENTS</span><h2>联系信息与需求</h2></div><span class="section-icon">${icon('doc')}</span></div><div class="field-grid">${form.fields.map(fieldMarkup).join('')}</div></section><div id="form-status" class="form-status" role="status" aria-live="polite" hidden></div><div class="form-actions"><button type="submit" class="button button-primary">提交询价 ${icon('send')}</button><button type="reset" class="button button-secondary">清空填写</button></div></form>
-    <div class="inline-note">${icon('check')} <span>演示使用浏览器本地存储模拟原表单回执。<strong>request_quote 不提交、不生成询价编号</strong>；只有您点击“提交询价”并通过校验，页面才显示演示回执。</span></div>
+    <div class="inline-note">${icon('check')} <span>演示使用浏览器本地存储模拟原表单回执。<strong>request_quote 只预填</strong>；手动点击提交，或在页面确认 Agent 的 submit_quote 后，才会生成本地演示回执，不会发送给真实企业。</span></div>
   </div>${promptPanel('quote')}</div>`;
   $('#quote-form').addEventListener('submit',submitQuote);
-  $('#quote-form').addEventListener('reset',()=>{setTimeout(()=>{const status=$('#form-status');status.hidden=true;clearErrors();document.querySelectorAll('.item-row input').forEach(i=>i.value='');},0);});
+  $('#quote-form').addEventListener('reset',()=>{lastSubmission=null;setTimeout(()=>{const status=$('#form-status');status.hidden=true;clearErrors();document.querySelectorAll('.item-row input').forEach(i=>i.value='');},0);});
   if(form.multiItem){
     $('#add-row').addEventListener('click',()=>{
       const next=Math.max(0,...rows.map(r=>Number(r.ref.split('_')[1])))+1;
@@ -232,14 +235,30 @@ function validateForm(){
   for(const [key,message] of Object.entries(errors)){$(`#error-${key}`).textContent=message;$(`#field-${key}`).setAttribute('aria-invalid','true');}
   return errors;
 }
+function currentInquiryDraft(){
+  return {
+    site:route.site,formId:form.id,
+    productIds:form.multiItem?rows.map(r=>r.productId):[product.id],
+    items:form.multiItem?rows.map(row=>({rowRef:row.ref,productId:row.productId,...Object.fromEntries(form.lineFields.map(field=>[field.key,$(`#${field.key}-${row.ref}`).value]))})):[],
+    fields:Object.fromEntries(form.fields.map(field=>[field.key,$(`#field-${field.key}`).value]))
+  };
+}
+function submitCurrentInquiry(){
+  const errors=validateForm();
+  if(Object.keys(errors).length){setStatus('请按字段提示修正后再提交。','error');$(`#field-${Object.keys(errors)[0]}`).focus();return {status:'validation_error',fieldErrors:errors,message:'询价尚未提交，请修正页面标出的字段。'};}
+  const result=saveDemoInquiry(currentInquiryDraft(),{storage:inquiryStorage,previous:lastSubmission});
+  if(result.status==='submitted'){
+    lastSubmission=result;
+    setStatus(`演示表单已接收，回执 ${result.receipt.id}。这是浏览器本地模拟记录，并未发送给真实企业。`,'success');
+    $('#form-status').scrollIntoView({behavior:'smooth',block:'center'});
+    return {status:'submitted',receipt:result.receipt,reused:result.reused,message:'已生成浏览器本地演示回执，未发送给真实企业。'};
+  }
+  setStatus(result.message,'error');
+  return result;
+}
 function submitQuote(event){
-  event.preventDefault();const errors=validateForm();
-  if(Object.keys(errors).length){setStatus('请按字段提示修正后再提交。','error');$(`#field-${Object.keys(errors)[0]}`).focus();return;}
-  const record={id:`DEMO-${Date.now().toString().slice(-8)}`,site:route.site,productIds:form.multiItem?rows.map(r=>r.productId):[product.id],createdAt:new Date().toISOString(),fields:Object.fromEntries(form.fields.map(f=>[f.key,$(`#field-${f.key}`).value]))};
-  try{const existing=JSON.parse(localStorage.getItem('webmcp-demo-inquiries')||'[]');existing.push(record);localStorage.setItem('webmcp-demo-inquiries',JSON.stringify(existing));}
-  catch{setStatus('本地演示存储不可用，本次提交结果无法确认；请先不要重复提交。','error');return;}
-  setStatus(`演示表单已接收，回执 ${record.id}。这是浏览器本地模拟记录，并未发送给真实企业。`,'success');
-  $('#form-status').scrollIntoView({behavior:'smooth',block:'center'});
+  event.preventDefault();
+  submitCurrentInquiry();
 }
 
 function toolResult(value){return JSON.stringify(value);}
@@ -293,7 +312,7 @@ function toolDefinitions(){
     }
   }];
   if(route.view==='quote'&&form.webmcp)return [{
-    name:'request_quote',description:`填写${site.name}本页“${form.title}”表单，供用户在页面核对并亲自点击提交；本工具不发送询价。`,
+    name:'request_quote',description:`填写${site.name}本页“${form.title}”表单，供用户在页面核对；本工具不提交询价。`,
     inputSchema:quoteSchema(form,rows),annotations:{readOnlyHint:false,consequentialHint:false,untrustedContentHint:true},
     execute:async(args={})=>{
       const allKeys=['items',...form.fields.map(f=>f.key)];
@@ -311,8 +330,23 @@ function toolDefinitions(){
       const errors=validateForm();
       $('#quote-form').scrollIntoView({behavior:'smooth',block:'start'});
       if(Object.keys(errors).length){setStatus('已保留本次填写内容，请补齐或修正标出的字段。','error');return toolResult({status:'validation_error',fieldErrors:errors,message:'表单尚未提交；请补齐或修正字段后再核对。'});}
-      setStatus('WebMCP 已将信息填写到页面。请核对商品、数量和联系信息，再由您点击“提交询价”。','ready');
-      return toolResult({status:'awaiting_user_submit',message:'已预填在线询价表单，请用户核对并点击页面上的提交询价按钮；当前没有产生询价记录。',form:form.title});
+      setStatus('WebMCP 已将信息填写到页面。请核对商品、数量和联系信息；可自行提交，或确认后让 Agent 提交。','ready');
+      return toolResult({status:'awaiting_user_confirmation',message:'已预填在线询价表单，本次预填没有提交。请用户核对；用户确认后可调用 submit_quote，也可自行点击提交询价。',form:form.title});
+    }
+  },{
+    name:'submit_quote',description:`用户已核对${site.name}当前“${form.title}”表单并明确要求提交后调用。使用页面当前值，要求用户在浏览器确认，调用原提交处理，并返回实际结果与回执；不要在预填后自动调用。`,
+    inputSchema:{type:'object',properties:{},additionalProperties:false},
+    annotations:{readOnlyHint:false,consequentialHint:true,untrustedContentHint:true},
+    execute:async(args={})=>{
+      if(!args||typeof args!=='object'||Array.isArray(args)||Object.keys(args).length)return toolResult({status:'validation_error',message:'submit_quote 只接收空对象；请先在页面填写并核对。'});
+      const errors=validateForm();
+      if(Object.keys(errors).length){setStatus('请按字段提示修正后再提交。','error');$(`#field-${Object.keys(errors)[0]}`).focus();return toolResult({status:'validation_error',fieldErrors:errors,message:'询价尚未提交，请修正页面标出的字段。'});}
+      if(lastSubmission?.status==='submitted'&&lastSubmission.signature===JSON.stringify(currentInquiryDraft()))return toolResult(submitCurrentInquiry());
+      if(!window.confirm(`请确认提交当前可见的“${form.title}”表单给 ${site.name}？演示环境只会生成浏览器本地回执。`)){
+        setStatus('您已取消提交，表单仍可修改。','ready');
+        return toolResult({status:'cancelled',message:'用户取消提交，本次未生成询价记录。'});
+      }
+      return toolResult(submitCurrentInquiry());
     }
   }];
   return [];

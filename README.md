@@ -1,6 +1,6 @@
 # WebMCP 产品咨询与询价
 
-这是企业网站中台的 WebMCP 询价场景产品设计及可交互原型。买家 Agent 在官网查找产品、打开详情、查询规格和交期，再进入现有询价表单辅助填写；买家核对后亲自提交。项目版本处于 **0.x**，当前产品设计文档为 v0.21。
+这是企业网站中台的 WebMCP 询价场景产品设计及可交互原型。买家 Agent 在官网查找产品、打开详情、查询规格和交期，再进入现有询价表单辅助填写；买家核对后可自行提交，也可授权 Agent 提交并获取回执。项目版本处于 **0.x**，当前产品设计文档为 v0.22。
 
 ## 项目结构
 
@@ -14,6 +14,7 @@
 | [`demo/admin.html`](./demo/admin.html)                                                                     | 后台配置原型：属性模板、产品编辑与 form 的 WebMCP 设置 |
 | [`demo/catalog.js`](./demo/catalog.js)                                                                     | 演示产品、表单数据及由当前页面数据生成 Schema 的逻辑     |
 | [`demo/app.js`](./demo/app.js)                                                                             | 前台页面渲染、WebMCP 工具注册、预填与本地提交回执       |
+| [`demo/submission.js`](./demo/submission.js)                                                               | 前台手动提交与 WebMCP 提交共用的本地回执保存逻辑       |
 | [`demo/admin.js`](./demo/admin.js)                                                                         | 后台原型交互与当前浏览器的配置保存                  |
 | [`demo/manual-examples.js`](./demo/manual-examples.js)                                                     | Inspector 手动执行时可复制的参数示例            |
 | [`demo/README.md`](./demo/README.md)                                                                       | 逐页提问脚本与 Inspector 操作说明             |
@@ -48,13 +49,14 @@ python3 -m http.server 8765
 
 ## 体验与验证
 
-前台的“官网选择”页模拟发现与理解；进入任一模拟官网后，当前产品列表、详情或询价页才注册相应的 WebMCP 工具。使用支持 WebMCP 的 Chrome 及 **WebMCP - Model Context Tool Inspector** 体验时，按 [`demo/README.md`](./demo/README.md) 的自然语言脚本逐页提问。模型未正确调用时，可复制页面右侧的 **Input Arguments** JSON，在 Inspector 选择同名工具手动执行。WebMCP 未启用时，页面仍可手动浏览和填写表单。浏览器启用方式见 [Chrome WebMCP 文档](https://developer.chrome.com/docs/ai/webmcp/)。
+前台的“官网选择”页模拟发现与理解；进入任一模拟官网后，当前产品列表、详情或询价页才注册相应的 WebMCP 工具。询价页的 `request_quote` 只预填，`submit_quote` 在用户核对并明确授权后请求页面确认、提交当前表单并返回回执；手动提交仍可用。使用支持 WebMCP 的 Chrome 及 **WebMCP - Model Context Tool Inspector** 体验时，按 [`demo/README.md`](./demo/README.md) 的自然语言脚本逐页提问。模型未正确调用时，可复制页面右侧的 **Input Arguments** JSON，在 Inspector 选择同名工具手动执行。WebMCP 未启用时，页面仍可手动浏览和填写表单。浏览器启用方式见 [Chrome WebMCP 文档](https://developer.chrome.com/docs/ai/webmcp/)。
 
 需要 Node.js 运行本地校验：
 
 ```bash
-node --test demo/catalog.test.mjs
+node --test demo/*.test.mjs
 node --check demo/app.js
+node --check demo/submission.js
 node --check demo/admin.js
 ```
 
@@ -68,4 +70,4 @@ node --check demo/admin.js
 
 **希望访问者不手动开测试开关：**&#x6309; [Chrome WebMCP 文档](https://developer.chrome.com/docs/ai/webmcp/)申请当前 HTTPS 域名的 WebMCP Origin Trial，并按照 [Origin Trial 接入说明](https://developer.chrome.com/docs/web-platform/origin-trials)把该域名的有效 token 放入每个需要使用工具的页面的 `Origin-Trial` 响应头，或放入该页面 `<head>` 的 `<meta http-equiv="origin-trial" content="实际申请的 TOKEN">`。本演示的根目录 `index.html` 与 `demo/index.html` 都会注册工具，后台 `demo/admin.html` 不注册工具。Token 需要与访问页面的 origin 匹配；不能把示例占位字符串直接上传。Inspector 本身仍是开发测试工具，应按其文档使用支持的 Chrome 与测试开关。
 
-在目标页面的 Chrome DevTools Console 输入 `typeof document.modelContext?.registerTool`：结果为 `"function"` 才说明当前页面有注册接口；结果为 `"undefined"` 时先检查浏览器版本、flag 或 Origin Trial token。若服务器使用非 localhost 的 HTTP 地址，先改为 HTTPS；WebMCP 接口要求安全上下文。接口可用后，本站产品列表页右上角应显示 `2 WebMCP tools ready`，详情页显示 3 项，询价页显示 1 项；“官网选择”页本来就没有工具。
+在目标页面的 Chrome DevTools Console 输入 `typeof document.modelContext?.registerTool`：结果为 `"function"` 才说明当前页面有注册接口；结果为 `"undefined"` 时先检查浏览器版本、flag 或 Origin Trial token。若服务器使用非 localhost 的 HTTP 地址，先改为 HTTPS；WebMCP 接口要求安全上下文。接口可用后，本站产品列表页右上角应显示 `2 WebMCP tools ready`，详情页显示 3 项，询价页显示 2 项；“官网选择”页本来就没有工具。

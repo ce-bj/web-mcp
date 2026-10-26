@@ -2,7 +2,7 @@
 
 后台配置界面见 [admin.html](./admin.html)：属性模板的 WebMCP Tab、属性原编辑窗口中的“WebMCP 可查询”，以及 form 表单设置新增的 WebMCP Tab。产品编辑页说明具体产品值仍在原位置维护。页面可切换开关、编辑说明并保存到当前浏览器；这是用于评审的 HTML 原型，不连接真实中台，也不会修改前台演示工具。
 
-本演示对应[询价产品设计 v0.21](../webmcp-inquiry-product-design.md)，使用虚构的“澄川管业”和“衡星精密”两家官网。入口页模拟 Agent 根据站点公开简介完成“发现、理解”；进入官网后才注册当前页的 WebMCP 工具。四项查找、咨询和预填工具是 `search_products`、`get_product_spec`、`check_lead_time`、`request_quote`；两项站内导航工具是 `open_product_detail` 和 `open_inquiry_form`。导航只打开原页面，不增改业务资料，也不提交询价。所有产品页 2 项工具、产品详情 3 项、询价页 1 项。询价工具只预填，原表单由用户点击提交。本地存储模拟回执，不会向真实企业发送信息。
+本演示对应[询价产品设计 v0.22](../webmcp-inquiry-product-design.md)，使用虚构的“澄川管业”和“衡星精密”两家官网。入口页模拟 Agent 根据站点公开简介完成“发现、理解”；进入官网后才注册当前页的 WebMCP 工具。产品查找与咨询使用 `search_products`、`get_product_spec`、`check_lead_time`；站内导航使用 `open_product_detail`、`open_inquiry_form`；询价页使用 `request_quote` 预填，再用 `submit_quote` 提交并取得回执。所有产品页 2 项工具、产品详情 3 项、询价页 2 项。用户也可点击原表单按钮提交。本地存储模拟回执，不会向真实企业发送信息。
 
 ## 启动
 
@@ -30,8 +30,8 @@ Inspector 的聊天框和下方 **Tool / Input Arguments / Execute Tool** 是两
 | 4 | 产品详情 | 这款产品的公称直径、环刚度和执行标准是什么？ | `get_product_spec({})` 返回 DN315、SN8、GB/T 19472.1 等当前产品值 |
 | 5 | 同一详情页 | 我大概要 1200 米，12 月中旬希望发货。这款产品的交期是多久？ | `check_lead_time({})` 返回“预计 18 个工作日”；不能据此承诺本次订单日期 |
 | 6 | 同一详情页 | 我想询价，顺便请对方确认能否满足发货时间，以及有没有第三方检测报告。 | Agent 用 `open_inquiry_form` 打开原询价页；未确认的检测报告进入询价内容 |
-| 7 | 澄川管业 → 在线询价 | 这款产品要 1200 米，项目在江苏，希望 12 月中旬发货。联系人王宁，手机 13800138000，邮箱 wang.ning@example.com。也请对方确认第三方检测报告。 | `request_quote` 填入商品行、联系字段和询价内容，返回 `awaiting_user_submit` |
-| 8 | 同一询价页 | 我先看看填写的内容，确认后自己提交。 | 用户核对后手动点击，页面才出现本地演示回执 |
+| 7 | 澄川管业 → 在线询价 | 这款产品要 1200 米，项目在江苏，希望 12 月中旬发货。联系人王宁，手机 13800138000，邮箱 wang.ning@example.com。也请对方确认第三方检测报告。 | `request_quote` 填入商品行、联系字段和询价内容，返回 `awaiting_user_confirmation`；此时没有回执 |
+| 8 | 同一询价页 | 我已经核对表单，信息无误。请提交这份询价，并告诉我回执编号。 | Agent 调用 `submit_quote({})`；用户在页面确认后返回 `submitted` 及本地演示回执。用户也可直接点击提交按钮 |
 
 第 7 步如果 Inspector 只会询问缺失信息，可在询价页复制 `request_quote` 的 Input Arguments。管材表单初始一行的示例是：
 
@@ -44,6 +44,8 @@ Inspector 的聊天框和下方 **Tool / Input Arguments / Execute Tool** 是两
   "inquiryContent":"项目在江苏，计划采购 DN315 / SN8 双壁波纹管约 1200 米，希望 12 月中旬发货。请确认能否满足目标日期，并提供第三方检测报告。"
 }
 ```
+
+第 8 步可在 Inspector 选择 `submit_quote`，把 `{}` 粘贴到 **Input Arguments** 后执行。页面会弹出确认框；由用户亲自确认才会提交。工具结果中的 `receipt.id` 和 `receipt.submittedAt` 来自此次演示保存结果，`receipt.mode` 为 `demo_local`。取消会返回 `cancelled` 且不产生新记录；字段校验失败返回 `validation_error`；本地存储无法确认结果时返回 `unknown`，不要自动重复提交。
 
 ## 第二家官网与动态表单
 
@@ -59,6 +61,6 @@ Inspector 的聊天框和下方 **Tool / Input Arguments / Execute Tool** 是两
 (await document.modelContext.getTools()).map(({name,description,inputSchema,annotations}) => ({name,description,inputSchema,annotations}))
 ```
 
-管材详情应看到 `get_product_spec`、`check_lead_time`、`open_inquiry_form`；询价页只看到 `request_quote`。`request_quote` 的执行结果表示预填状态，用户手点提交后的页面回执是另一个时点。
+管材详情应看到 `get_product_spec`、`check_lead_time`、`open_inquiry_form`；询价页应看到 `request_quote`、`submit_quote`。前者只返回预填状态，后者在页面确认和实际保存后返回回执。
 
 WebMCP 浏览器启用与 Inspector 说明参考 [Chrome 官方文档](https://developer.chrome.com/docs/ai/webmcp/)，工具注册接口参考 [Imperative API](https://developer.chrome.com/docs/ai/webmcp/imperative-api)。

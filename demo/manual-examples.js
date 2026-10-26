@@ -27,7 +27,10 @@ export function manualExamplesForPage({view,siteKey,product,form,rows=[],selecte
     const args={};
     if(form.multiItem)args.items=rows.map((row,index)=>({rowRef:row.ref,quantity:index===0?'1200 米':'200 米'}));
     for(const field of form.fields)if(values[field.key]!==undefined)args[field.key]=values[field.key];
-    return [{name:'request_quote',purpose:'预填当前表单，待用户核对提交',args}];
+    return [
+      {name:'request_quote',purpose:'预填当前表单，待用户核对',args},
+      {name:'submit_quote',purpose:'核对后提交当前表单并获取回执；执行时还需在页面确认',args:{},note:'先完成填写并核对；若页面出现确认框，请由用户亲自确认。'}
+    ];
   }
   return [];
 }
