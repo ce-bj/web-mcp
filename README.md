@@ -17,7 +17,6 @@
 | [`demo/submission.js`](./demo/submission.js)                                                               | 前台手动提交与 WebMCP 提交共用的本地回执保存逻辑       |
 | [`demo/admin.js`](./demo/admin.js)                                                                         | 后台原型交互与当前浏览器的配置保存                  |
 | [`demo/manual-examples.js`](./demo/manual-examples.js)                                                     | Inspector 手动执行时可复制的参数示例            |
-| [`demo/README.md`](./demo/README.md)                                                                       | 逐页提问脚本与 Inspector 操作说明             |
 
 ## 本地启动与进入页面
 
@@ -49,9 +48,52 @@ python3 -m http.server 8765
 
 ## 体验与验证
 
-前台的“官网选择”页模拟发现与理解；进入任一模拟官网后，当前产品列表、详情或询价页才注册相应的 WebMCP 工具。询价页的 `request_quote` 只预填，`submit_quote` 在用户核对并明确授权后请求页面确认、提交当前表单并返回回执；手动提交仍可用。使用支持 WebMCP 的 Chrome 及 **WebMCP - Model Context Tool Inspector** 体验时，按 [`demo/README.md`](./demo/README.md) 的自然语言脚本逐页提问。模型未正确调用时，可复制页面右侧的 **Input Arguments** JSON，在 Inspector 选择同名工具手动执行。WebMCP 未启用时，页面仍可手动浏览和填写表单。浏览器启用方式见 [Chrome WebMCP 文档](https://developer.chrome.com/docs/ai/webmcp/)。
+前台的“官网选择”页模拟发现与理解；进入任一模拟官网后，当前产品列表、详情或询价页才注册相应的 WebMCP 工具。`request_quote` 只预填，`submit_quote` 在用户核对并明确授权后请求页面确认、提交当前表单并返回回执；手动提交仍可用。页面右上角只有在实际注册成功后才显示工具数量。若本地 Chrome 尚未开放 WebMCP，先启用 `chrome://flags/#enable-webmcp-testing` 并重启浏览器，再使用 **WebMCP - Model Context Tool Inspector**；服务器部署的启用条件见下文。WebMCP 未启用时仍可手动浏览和填写表单。
 
-需要 Node.js 运行本地校验：
+Inspector 的聊天框与下方 **Tool / Input Arguments / Execute Tool** 是两种操作。聊天框找到了产品，不会自动替下方手动执行框填入参数；其中的 `"keyword":"example_string"` 是占位值，直接执行只会搜索这个英文词。每个前台页面右侧都列出当前工具可复制的 JSON。手动执行时，先在 Inspector 选择同名 Tool，再复制参数到 **Input Arguments**。切换页面或修改商品行后，重新读取当前页工具和参数。
+
+### 主流程：市政排水管材
+
+| 步骤 | 当前页 | 输入给 Inspector 的话 | 预期 |
+| --- | --- | --- | --- |
+| 1 | 两家官网 | 我要找市政排水用双壁波纹管，DN315、SN8，大约 1200 米。比较这两个官网简介，告诉我应该先进入哪家官网。 | 基于可见简介选择澄川管业；此页无 WebMCP 工具 |
+| 2 | 澄川管业 → 所有产品 | 你们有适合市政排水用的 DN315、SN8 双壁波纹管吗？ | `search_products` 找到产品并询问是否打开 |
+| 3 | 同一产品列表 | 好，打开这款产品的详情。 | `open_product_detail` 打开详情页 |
+| 4 | 产品详情 | 这款产品的公称直径、环刚度和执行标准是什么？ | `get_product_spec({})` 返回当前产品的已开放规格 |
+| 5 | 同一详情页 | 我大概要 1200 米，12 月中旬希望发货。这款产品的交期是多久？ | `check_lead_time({})` 返回原交期，不承诺本次订单日期 |
+| 6 | 同一详情页 | 我想询价，顺便请对方确认能否满足发货时间，以及有没有第三方检测报告。 | `open_inquiry_form` 打开原询价页；待确认事项进入询价内容 |
+| 7 | 澄川管业 → 在线询价 | 这款产品要 1200 米，项目在江苏，希望 12 月中旬发货。联系人王宁，手机 13800138000，邮箱 wang.ning@example.com。也请对方确认第三方检测报告。 | `request_quote` 预填商品行和联系字段，返回 `awaiting_user_confirmation`，不产生回执 |
+| 8 | 同一询价页 | 我已经核对表单，信息无误。请提交这份询价，并告诉我回执编号。 | `submit_quote({})` 请求页面确认；确认后返回 `submitted` 和本地演示回执，也可手动点击提交按钮 |
+
+第 7 步如需手动执行 `request_quote`，管材表单初始一行的 **Input Arguments** 示例为：
+
+```json
+{
+  "items": [{"rowRef":"row_1","quantity":"1200 米"}],
+  "contactName":"王宁",
+  "phone":"13800138000",
+  "email":"wang.ning@example.com",
+  "inquiryContent":"项目在江苏，计划采购 DN315 / SN8 双壁波纹管约 1200 米，希望 12 月中旬发货。请确认能否满足目标日期，并提供第三方检测报告。"
+}
+```
+
+第 8 步选择 `submit_quote`，将 `{}` 填入 **Input Arguments**。页面会再弹出确认框，用户确认后才会保存本地演示记录。成功结果中的 `receipt.id`、`receipt.submittedAt` 来自这次本地保存，`receipt.mode` 为 `demo_local`；取消返回 `cancelled`，校验失败返回 `validation_error`，结果不能确认时返回 `unknown`，不要自动重复提交。
+
+### 第二家官网与动态表单
+
+切换到“衡星精密 → 所有产品”，向 Inspector 输入：“你们有 6205-2RS 深沟球轴承吗？”确认后说：“好，打开它的详情。”详情页问：“这款轴承的型号、内径、材质和交期是什么？”然后说：“我想就这款轴承询价。”进入表单后说：“我要采购 200 件。联系人李工，工作邮箱 ligong@example.com；用于电机，请确认批量价格与交货期。”
+
+该站的 `get_product_spec.fieldKeys` 来自轴承属性模板。其 `request_quote.inputSchema` 没有管材表单的 `items` 和 `phone`，但有必填整数 `quantity`。切换表单后须重新读取 Schema，不能沿用上一站的字段或商品引用。
+
+### 直接检查工具与本地校验
+
+在支持 WebMCP 的 Chrome 开发者工具中可运行：
+
+```js
+(await document.modelContext.getTools()).map(({name,description,inputSchema,annotations}) => ({name,description,inputSchema,annotations}))
+```
+
+产品列表页应有 `search_products`、`open_product_detail`，产品详情页应有 `get_product_spec`、`check_lead_time`、`open_inquiry_form`，询价页应有 `request_quote`、`submit_quote`。工具定义参见 [Chrome WebMCP 文档](https://developer.chrome.com/docs/ai/webmcp/imperative-api)。本地校验需要 Node.js：
 
 ```bash
 node --test demo/*.test.mjs
@@ -60,7 +102,7 @@ node --check demo/submission.js
 node --check demo/admin.js
 ```
 
-本项目没有构建步骤。演示覆盖主流程；产品文档中的关闭开关、字段缺值、故障等异常为产品规则与验收场景，前台演示没有逐项制作状态切换器。
+本项目没有构建步骤。演示覆盖主流程；关闭开关、字段缺值及故障等异常的产品规则和验收场景见独立的[产品设计文档](./webmcp-inquiry-product-design.md)。
 
 ## 部署后看不到 WebMCP 工具
 

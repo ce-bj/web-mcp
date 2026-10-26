@@ -49,7 +49,7 @@ function renderShell(){
         ${navItem('产品详情',pageUrl('detail','bearing','bearing-6205'),route.view==='detail'&&route.site==='bearing','规格 · 交期')}
         ${navItem('产品询价',pageUrl('quote','bearing','bearing-6205'),route.view==='quote'&&route.site==='bearing','预填 · 提交')}
       </div>
-      <div class="sidebar-bottom"><span class="mini-label">测试方式</span><p>在 Chrome 中打开本页，使用 Model Context Tool Inspector 对当前页提问。</p><a href="${demoFileUrl('README.md')}" target="_blank" rel="noopener">查看测试脚本 ${icon('arrow')}</a></div>
+      <div class="sidebar-bottom"><span class="mini-label">测试方式</span><p>在 Chrome 中打开本页，使用 Model Context Tool Inspector 对当前页提问。</p><a href="${demoFileUrl('../README.md')}" target="_blank" rel="noopener">查看测试脚本 ${icon('arrow')}</a></div>
     </aside>
     <div class="workspace">
       <header class="topbar"><div class="crumb">演示工作台 <span>/</span> ${route.view==='compare'?'官网选择':e(site.name)} <span>/</span> <strong>${currentLabel}</strong></div><div class="top-actions"><a class="admin-link" href="${demoFileUrl('admin.html')}" aria-label="打开 WebMCP 后台配置原型">后台配置 ↗</a><span id="tool-badge" class="tool-badge pending" role="status" aria-live="polite"><span class="pulse"></span>检查 WebMCP…</span></div></header>
