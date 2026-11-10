@@ -77,23 +77,19 @@ test('手动示例覆盖发现页和顾地各页面', () => {
   assert.deepEqual(manualExamplesForPage({view: 'discover'}).map(x => x.name), ['search_suppliers', 'inspect_supplier', 'open_supplier_site']);
   const product = goodyProduct('pvcu-uh-water');
   assert.deepEqual(manualExamplesForPage({view: 'detail', siteKey: 'goody', product}).slice(0, 3).map(x => x.name), ['get_product_detail', 'request_quote', 'submit_quote']);
-  for (const view of ['home', 'message']) {
-    const names = manualExamplesForPage({view, siteKey: 'goody', product}).map(x => x.name);
-    assert.ok(names.includes('request_message') && names.includes('submit_message'), view);
-  }
-  for (const view of ['company', 'contact', 'products']) {
+  const messageNames = manualExamplesForPage({view: 'message', siteKey: 'goody', product}).map(x => x.name);
+  assert.ok(messageNames.includes('request_message') && messageNames.includes('submit_message'));
+  for (const view of ['home', 'company', 'contact', 'products']) {
     const names = manualExamplesForPage({view, siteKey: 'goody', product}).map(x => x.name);
     assert.ok(!names.includes('request_message') && names.includes('open_site_page'), view);
   }
-  assert.ok('address' in manualExamplesForPage({view: 'home', siteKey: 'goody', product}).find(x => x.name === 'request_message').args);
 });
 
 test('留资工具只出现在有表单的页面，其余页面跳转到在线留言', () => {
   const withForm = GOODY_VIEWS.filter(v => leadFormFor(v).form);
-  assert.deepEqual(withForm.sort(), ['detail', 'home', 'message']);
+  assert.deepEqual(withForm.sort(), ['detail', 'message']);
   assert.equal(leadFormFor('detail').fill, 'request_quote');
-  assert.equal(leadFormFor('home').form, goodyForms.homeLead);
-  for (const view of ['company', 'contact', 'products']) assert.equal(leadFormFor(view).redirect, 'message');
-  const home = quoteSchema(goodyForms.homeLead);
-  assert.deepEqual(home.required, ['phone', 'email', 'address', 'message']);
+  assert.equal(leadFormFor('message').fill, 'request_message');
+  for (const view of ['home', 'company', 'contact', 'products']) assert.equal(leadFormFor(view).redirect, 'message');
+  assert.deepEqual(Object.keys(goodyForms).sort(), ['inquiry', 'message']);
 });

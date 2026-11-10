@@ -1,6 +1,6 @@
 # WebMCP 一期固定演示：流程、服务与实现
 
-- 版本：v0.4
+- 版本：v0.7
 - 日期：2026-11-10
 - 演示对象：顾地科技演示站 <https://endemo.xuoumaill.cn/>
 - 本仓库可运行的模拟：`index.html?view=discover`（模拟搜索）→ `index.html?view=home&site=goody`（顾地模拟官网）
@@ -12,7 +12,7 @@
 1. [定位：与通用产品需求的区别](#scope)
 2. [演示目标](#goal)
 3. [演示流程](#flow)
-4. [本期范围总览](#summary)
+4. [本期范围总览](#summary)（4.3 [逐个 WebMCP：功能与所在页面](#per-page)）
 5. [演示站现状与改造要求](#gap)
 6. [WebMCP 服务定义【网站开发】](#tools)
 7. [实现方案【网站开发】](#impl)
@@ -93,7 +93,7 @@ flowchart TD
 | 5 找产品 | 任意官网页面 | `search_products` → `open_product_detail` | 找到候选并在用户确认后打开 | 网站开发 |
 | 6 咨询 | 产品详情 | `get_product_detail` | 按规格表回答；价格、交期说明未公开 | 网站开发 |
 | 7 留资 | 产品详情（嵌入表单） | `request_quote` → `submit_quote` | 预填后待核对；页面确认后提交并返回结果 | 网站开发 |
-| 7′ 通用留资 | 首页、在线留言页直接留资；其余页面先跳转 | 有表单：`request_message` → `submit_message`；没有表单：`open_site_page(message)` → `request_message` → `submit_message` | 没有指定产品的采购、合作、代理、售后需求 | 网站开发 |
+| 7′ 通用留资 | 在线留言页直接留资；其余页面先跳转 | 在线留言页：`request_message` → `submit_message`；其他页面：`open_site_page(message)` → `request_message` → `submit_message` | 没有指定产品的采购、合作、代理、售后需求 | 网站开发 |
 
 <a id="summary"></a>
 
@@ -110,18 +110,19 @@ flowchart TD
 | `get_product_detail` | 产品详情 | 当前产品简介、特点、应用、参数、规格表、认证 | 只读 |
 | `request_quote` | 产品详情 | 预填“产品咨询”表单 | 改页面，不提交 |
 | `submit_quote` | 产品详情 | 页面确认后走原提交 | **有业务后果** |
-| `request_message` | 首页、在线留言 | 预填本页留资表单（首页“代理商加盟 · 咨询”/ 在线留言） | 改页面，不提交 |
-| `submit_message` | 首页、在线留言 | 页面确认后走原提交 | **有业务后果** |
+| `request_message` | 在线留言 | 预填本页“在线留言”表单 | 改页面，不提交 |
+| `submit_message` | 在线留言 | 页面确认后走原提交 | **有业务后果** |
 
 **留资工具只跟随页面上真实存在的表单**，不为页面增加与内容不符的工具：
-- 有表单的页面（首页、产品详情、在线留言）注册本页表单的一组留资工具；
-- 没有表单的页面（关于、联系、产品列表、案例、新闻等）不注册留资工具，由 `open_site_page` 跳转到“在线留言”页后再留资。工具描述和返回结果会提示 Agent 这样做（见 6.4）。
+**一期只接入两张表单**：产品详情的“产品咨询”（`request_quote` / `submit_quote`）和在线留言页的“在线留言”（`request_message` / `submit_message`）。
+- 其他页面（首页、关于、联系、产品列表、案例、新闻等）不注册留资工具，由 `open_site_page` 跳转到“在线留言”页后再留资。工具描述和返回结果会提示 Agent 这样做（见 6.4）。
+- 演示站首页的“代理商加盟 · 咨询”表单（`e_form-34`）一期**不接入** WebMCP，页面上照常可人工填写。
 
 ### 4.2 页面 × WebMCP 总表
 
 | 页面（`pageObj.filename`） | 公共 4 项<br/>get_company_info · search_products · open_product_detail · open_site_page | get_product_detail | 留资工具 | 留资表单 | 合计 |
 |---|---|---|---|---|---|
-| 首页（`Home`） | ✓ | — | request_message · submit_message | 本页“代理商加盟 · 咨询”表单 `e_form-34`（地址必填） | 6 |
+| 首页（`Home`） | ✓ | — | 无 | 不接入本页“代理商加盟”表单 → `open_site_page(message)` 跳转到在线留言 | 4 |
 | 关于顾地（`company`） | ✓ | — | 无 | 本页无表单 → `open_site_page(message)` 跳转到在线留言 | 4 |
 | 公司简介（`about_us`） | ✓ | — | 无 | 同上 | 4 |
 | 联系我们（`contact_us`） | ✓ | — | 无 | 同上 | 4 |
@@ -133,7 +134,126 @@ flowchart TD
 
 本仓库模拟实现了表中除“公司简介”和“其他”以外的页面，工具注册结果与表一致（已在浏览器逐页核对）。
 
-### 4.3 不开发的部分
+<a id="per-page"></a>
+
+### 4.3 逐个 WebMCP：功能与所在页面
+
+每个工具先说明功能（能做什么、用户怎么问、怎么调用），再列出它应该出现在哪些页面。调用示例中的分类 ID、产品 ID 按真实站写（如 `"3"`、`"51"`）；本仓库模拟中对应为 `water`、`pvcu-uh-water`。完整定义见第 6 节，页面与工具的对照见 4.2。
+
+**页面网址一览**（下文“所在页面”按此称呼）
+
+| 页面 | 网址 | 有无表单 |
+|---|---|---|
+| 首页 | <https://endemo.xuoumaill.cn/> | 有“代理商加盟”表单 `e_form-34`，一期不接入 |
+| 关于顾地 | <https://endemo.xuoumaill.cn/company.html> | 无 |
+| 公司简介 | <https://endemo.xuoumaill.cn/about_us_1/1.html> | 无 |
+| 联系我们 | <https://endemo.xuoumaill.cn/contact_us.html> | 无 |
+| 产品中心 / 分类 | <https://endemo.xuoumaill.cn/products_list_1/2.html>，分类如 <https://endemo.xuoumaill.cn/products_list_1/3.html> | 无 |
+| 产品详情 | <https://endemo.xuoumaill.cn/product_detail/51.html>（及所有 `/product_detail/{id}.html`） | 有：“产品咨询”`e_form-37` |
+| 在线留言 | <https://endemo.xuoumaill.cn/message.html>（`/Message.html` 同页） | 有：“在线留言”`e_form-11` |
+| 其他 | 工程案例 <https://endemo.xuoumaill.cn/case.html>、新闻 <https://endemo.xuoumaill.cn/News_list_1/1.html>、新闻详情 <https://endemo.xuoumaill.cn/news_detail/232.html>、售后服务 <https://endemo.xuoumaill.cn/aftercare.html>、投资者关系等 | 无 |
+
+#### 4.3.1 get_company_info：查询公司信息
+
+**功能**：返回官网公开的公司简介、品牌、历史、生产基地与营销网络、研发实力、资质荣誉、品牌文化、联系方式，可按主题只取一部分。用于 Agent 在咨询前确认公司身份与实力。返回结果会引导下一步：查找产品，或按本页的留资方式留资（见 6.4）。只读。
+
+| 用户这样问 | 调用示例 |
+|---|---|
+| 这家公司是做什么的？是生产厂家吗？有哪些资质认证和生产基地？ | `{"topics":["profile","organization","honors"]}` |
+| 顾地是哪一年上市的？股票代码是多少？ | `{"topics":["profile","history"]}` |
+| 售后服务热线和公司地址是什么？ | `{"topics":["contact"]}` |
+
+**所在页面**：全部官网页面——首页、关于顾地、公司简介、联系我们、产品中心 / 分类、产品详情、在线留言、其他。在关于顾地、公司简介、联系我们三页，它是页面的主要工具。
+
+#### 4.3.2 search_products：查找产品
+
+**功能**：按关键词（名称、材质、用途）、产品分类、页码查找已发布产品，每页 6 条，返回名称、分类、概要、详情链接。规格参数（dn、压力）不参与检索。有结果时引导 Agent 先介绍候选、用户确认后再打开；无结果时引导换关键词，或询问用户是否留下需求。只读。
+
+| 用户这样问 | 调用示例 |
+|---|---|
+| 你们有适合城市供水的 PVC 给水管吗？ | `{"keyword":"PVC 给水管"}` |
+| 给水管系列里有哪些产品？ | `{"categoryId":"3"}` |
+| 你们做燃气管吗？ | `{"keyword":"燃气"}` |
+| 浏览全部产品，看下一页。 | `{"page":2}` |
+
+**所在页面**：全部官网页面。在产品分类页（如 `/products_list_1/3.html`）未指定分类时，默认限定当前分类；在产品中心页调用时，页面列表同步显示结果。
+
+#### 4.3.3 open_product_detail：打开产品详情
+
+**功能**：用户确认要看某款产品后，跳转到该产品的详情页。只接受 `search_products` 返回的产品 ID，执行前校验产品已发布、可访问；先返回 `opening` 再跳转。
+
+| 用户这样问 | 调用示例 |
+|---|---|
+| 好，打开 PVC-U/UH给水管 的详情。 | `{"productId":"51"}` |
+| 打开刚才那款 PE 燃气管看看。 | `{"productId":"<search_products 返回的 ID>"}` |
+
+**所在页面**：全部官网页面。
+
+#### 4.3.4 open_site_page：打开固定页面
+
+**功能**：打开首页、关于顾地、联系我们、产品中心、在线留言这 5 个固定页面，不接受任意网址。在**没有接入留资表单的页面**，它同时承担“去留资”的作用：描述中写明“用户要留下联系方式时，征得同意后打开 message”，打开在线留言页时返回“进入后用 `request_message` 填写”。
+
+| 用户这样问 | 调用示例 |
+|---|---|
+| 我想咨询工程合作，帮我留个联系方式。（在没有表单的页面） | `{"page":"message"}` |
+| 打开联系我们页面。 | `{"page":"contact"}` |
+| 回到产品中心。 | `{"page":"products"}` |
+
+**所在页面**：全部官网页面。其中首页、关于顾地、公司简介、联系我们、产品中心 / 分类、其他页面会带上“跳转留资”的引导；产品详情、在线留言有自己的留资表单，不带此引导。
+
+#### 4.3.5 get_product_detail：读取当前产品资料
+
+**功能**：读取当前详情页产品的概要、简介、特点、应用领域、参数、规格表和认证；规格表按行（公称外径）列（公称压力）返回，Agent 查表回答，不推算。价格、交期、库存不公开，放在 `notProvided` 中，并引导用户用 `request_quote` 留资。只读。
+
+| 用户这样问 | 调用示例 | 预期 |
+|---|---|---|
+| dn110、1.6MPa 的壁厚是多少？有什么认证？ | `{"sections":["specTables","certifications"]}` | 6.6 mm；中国环境标志产品认证 |
+| 这款产品有什么特点，适合哪些场景？ | `{"sections":["features","applications"]}` | 原文特点与应用领域 |
+| 这个规格的价格和交期是多少？ | `{}` | 说明未公开，引导留资 |
+
+**所在页面**：只在产品详情页（`/product_detail/{id}.html`）。
+
+#### 4.3.6 request_quote：预填产品咨询表单
+
+**功能**：把用户的联系方式和需求填进详情页“产品咨询”表单，咨询产品由“相关项”自动关联为当前产品；只填写、不提交，填完把表单滚动到可见位置，返回 `awaiting_user_confirmation`。电话、邮箱、详细说明必填，缺失时 Agent 先询问，不编造。
+
+| 用户这样问 | 调用示例 |
+|---|---|
+| 帮我留资咨询：dn110、1.6MPa 约 2000 米，项目在湖北武汉，希望 12 月中旬供货，请确认价格、交期并提供检测报告。联系人王宁，电话 13800138000，邮箱 wang.ning@example.com。 | `{"contactName":"王宁","phone":"13800138000","email":"wang.ning@example.com","region":"湖北武汉","inquiryContent":"dn110、1.6MPa 约 2000 米，项目在湖北武汉，希望 12 月中旬供货。请确认价格、交期并提供检测报告。"}` |
+
+**所在页面**：只在产品详情页。
+
+#### 4.3.7 submit_quote：提交产品咨询
+
+**功能**：用户核对表单并明确要求提交后，先在页面弹出确认，用户确认后触发原“立即提交”按钮，等待原系统结果并返回 `submitted`（附回执）、`cancelled`、`validation_error`、`failed` 或 `unknown`。不得在预填后自动调用；成功后不承诺回复时间。
+
+| 用户这样问 | 调用示例 |
+|---|---|
+| 我已核对表单，信息无误，请提交并告诉我结果。 | `{}` |
+
+**所在页面**：只在产品详情页。
+
+#### 4.3.8 request_message：预填留资表单
+
+**功能**：用户有采购需求、合作、代理经销、工程项目或售后等事项（不针对某款产品）要留下联系方式时，填写在线留言页的“在线留言”表单；只填写、不提交。电话、邮箱、留言内容必填，缺失时先询问。
+
+| 所在页面 | 表单 | 参数（\* 必填） | 用户这样问 | 调用示例 |
+|---|---|---|---|---|
+| 在线留言 | “在线留言”`e_form-11` | contactName、phone\*、email\*、message\* | 帮我留言：想了解工程项目合作和经销政策。联系人王宁，电话 13800138000，邮箱 wang.ning@example.com。 | `{"contactName":"王宁","phone":"13800138000","email":"wang.ning@example.com","message":"想了解工程项目合作和经销政策"}` |
+
+**所在页面**：只在在线留言页。其他页面不注册，由 `open_site_page` 跳到在线留言页后使用。
+
+#### 4.3.9 submit_message：提交留资表单
+
+**功能**：用户核对本页留资表单并明确要求提交后，页面确认、触发原提交按钮、返回实际结果，规则同 `submit_quote`。
+
+| 用户这样问 | 调用示例 |
+|---|---|
+| 确认无误，请提交。 | `{}` |
+
+**所在页面**：只在在线留言页。
+
+### 4.4 不开发的部分
 
 | 内容 | 性质 | 说明 |
 |---|---|---|
@@ -173,7 +293,7 @@ flowchart TD
 | 询价表单有商品子表 | “产品咨询”表单 `e_form-37`：名字、电话\*、邮箱\*、地区、详细说明\*，`e_relevantItem-39` 按页面参数 productId 自动关联产品 | `request_quote` 只含联系与说明字段，产品作为上下文 |
 | 询价表单在独立页面 | 嵌在详情页；提交成功后跳到 `/Message.html` | 不需要 `open_inquiry_form`；提交工具必须在跳转前拿到结果（见 7.6） |
 | 有站内搜索 | 没有搜索框，列表服务端分页 | 新增产品查询接口（见 7.5.2） |
-| 留资表单只在询价页 | 只有 3 个页面有表单：首页 `e_form-34`（代理商加盟 · 咨询）、产品详情 `e_form-37`（产品咨询）、在线留言 `e_form-11`；关于、联系、产品列表、案例、新闻等页面没有表单 | 有表单的页面绑定本页表单；没有表单的页面不加留资工具，引导跳转到在线留言页 |
+| 留资表单只在询价页 | 只有 3 个页面有表单：首页 `e_form-34`（代理商加盟 · 咨询）、产品详情 `e_form-37`（产品咨询）、在线留言 `e_form-11`；其他页面没有表单 | 一期只接入产品咨询、在线留言两张表单；首页表单不接入；其他页面不加留资工具，引导跳转到在线留言页 |
 
 <a id="tools"></a>
 
@@ -217,7 +337,7 @@ flowchart TD
 
 #### open_site_page
 
-用户要求时打开顾地官网的固定页面：home=官网首页，company=关于顾地，contact=联系我们，products=产品中心，message=在线留言（采购需求、合作、经销、售后留言）。在没有留资表单的页面，描述末尾追加：本页没有留资表单，用户要留下联系方式时，征得同意后打开 message，再在该页用 `request_message` 填写。
+用户要求时打开顾地官网的固定页面：home=官网首页，company=关于顾地，contact=联系我们，products=产品中心，message=在线留言（采购需求、合作、经销、售后留言）。在没有接入留资表单的页面，描述末尾追加：本页没有留资表单，用户要留下联系方式时，征得同意后打开 message，再在该页用 `request_message` 填写。
 
 ```json
 {"type":"object","properties":{"page":{"type":"string","enum":["home","company","contact","products","message"],"description":"home=官网首页；company=关于顾地；contact=联系我们；products=产品中心；message=在线留言"}},"required":["page"],"additionalProperties":false}
@@ -288,20 +408,11 @@ flowchart TD
 
 返回 `submitted`（含 `receipt`）、`cancelled`、`validation_error`、`failed` 或 `unknown`。
 
-### 6.3 通用留资工具（首页、在线留言页）
-
-工具名在各页面相同，`description` 中的表单位置和 `inputSchema` 随本页实际表单变化（通用需求 9.9 的规则）。
+### 6.3 通用留资工具（在线留言页）
 
 #### request_message
 
-用户有采购需求、合作、代理经销、工程项目或售后等事项要留下联系方式时，填写{表单位置}，供用户核对；本工具不提交。要就某款产品询价时，先打开该产品详情页使用 `request_quote`。电话、邮箱等必填信息用户没给时先询问，不要编造。
-
-| 页面 | {表单位置} | 参数 |
-|---|---|---|
-| 首页 | 本页“代理商加盟 · 咨询”表单 | contactName、phone\*、email\*、**address\***、message\* |
-| 在线留言 | 本页“在线留言”表单 | contactName、phone\*、email\*、message\* |
-
-其余页面没有表单，不注册这两个工具。
+用户有采购需求、合作、代理经销、工程项目或售后等事项要留下联系方式时，填写本页“在线留言”表单，供用户核对；本工具不提交。要就某款产品询价时，先打开该产品详情页使用 `request_quote`。电话、邮箱等必填信息用户没给时先询问，不要编造。
 
 在线留言表单：
 
@@ -314,28 +425,15 @@ flowchart TD
 },"required":["phone","email","message"],"additionalProperties":false}
 ```
 
-首页“代理商加盟 · 咨询”表单：
-
-```json
-{"type":"object","properties":{
-  "contactName":{"type":"string","description":"你的姓名：你的姓名"},
-  "phone":{"type":"string","description":"联系人电话号码（手机或座机）"},
-  "email":{"type":"string","format":"email","description":"您的邮箱：您的邮箱"},
-  "address":{"type":"string","description":"联系地址或所在城市，如“湖北省武汉市”"},
-  "message":{"type":"string","description":"咨询内容：代理加盟、采购需求、工程合作等需要企业回复的事项"}
-},"required":["phone","email","address","message"],"additionalProperties":false}
-```
-
 | 表单 | 演示站控件 `name` |
 |---|---|
-| 首页 `e_form-34` | `e_input-38`（姓名）、`text1711009214758`（电话）、`email1720263342292`（邮箱）、`e_input-57`（地址）、`e_textarea-39`（咨询内容） |
 | 在线留言 `e_form-11` | `text1711552842573`（名字）、`text1711552859516`（电话）、`text1727623015026`（邮箱）、`textarea1711552919507`（备注） |
 
 不关联产品。
 
 #### submit_message
 
-用户核对{表单位置}并明确要求提交后调用。先在页面请求用户确认，再走原提交处理并返回实际结果；不得在预填后自动调用。输入为 `{}`，返回规则同 `submit_quote`。
+用户核对本页“在线留言”表单并明确要求提交后调用。先在页面请求用户确认，再走原提交处理并返回实际结果；不得在预填后自动调用。输入为 `{}`，返回规则同 `submit_quote`。
 
 ### 6.4 描述与结果中的下一步引导
 
@@ -345,9 +443,9 @@ flowchart TD
 
 | 页面 | 引导文字中的留资方式 |
 |---|---|
-| 首页、在线留言 | 用本页 `request_message` 留下联系方式 |
+| 在线留言 | 用本页 `request_message` 留下联系方式 |
 | 产品详情 | 用本页 `request_quote` 留下联系方式 |
-| 其余页面（没有表单） | 用 `open_site_page`（page=message）跳转到“在线留言”页，再在该页用 `request_message` 留资 |
+| 其余页面（含首页） | 用 `open_site_page`（page=message）跳转到“在线留言”页，再在该页用 `request_message` 留资 |
 
 | 工具 | 引导内容 |
 |---|---|
@@ -426,7 +524,7 @@ flowchart LR
 
 | `pageObj.filename` | 演示站页面 | 注册的工具 |
 |---|---|---|
-| `Home` | `/` | 公共 4 项 + `request_message`、`submit_message`（本页 `e_form-34`） |
+| `Home` | `/` | 公共 4 项（本页“代理商加盟”表单一期不接入，留资经 `open_site_page` 跳转） |
 | `company` | `/company.html` | 公共 4 项（无表单，留资经 `open_site_page` 跳转） |
 | `about_us` | `/about_us_1/1.html` | 同上 |
 | `contact_us` | `/contact_us.html` | 同上 |
@@ -454,7 +552,6 @@ flowchart LR
                    "fields": { "contactName":"name1710405159852", "phone":"mobile1710405122396",
                                "email":"email1710405140587", "region":"e_input-41", "inquiryContent":"e_textarea-44" },
                    "descriptions": { "phone":"联系人电话号码（手机或座机）", … } },
-    "e_form-34": { "page":"Home", "title":"代理商加盟 · 咨询", "fill":"request_message", "submit":"submit_message", … },
     "e_form-11": { "page":"message", "title":"在线留言", "fill":"request_message", "submit":"submit_message", … }
   },
   "leadFallbackPage": "message"
@@ -673,7 +770,6 @@ addEventListener('pagehide', () => controller.abort());
 
 - **发现层对比**（演示外壳）：点“现状快照 2026-11-10”重做第 1 步，顾地排第 4，标题是 Magnetic building blocks；`inspect_supplier` 读到两个矛盾的 Organization。用来说明 5.1 的站点内容修正是前提。
 - **没有表单的页面留资**：在“关于顾地”页说“我想咨询工程合作，帮我留个联系方式。”本页没有留资工具，Agent 应征得同意后调用 `open_site_page({"page":"message"})` 跳到在线留言页；进入后说“联系人王宁，电话 13800138000，邮箱 wang.ning@example.com。”（`request_message`），再说“确认无误，请提交。”（`submit_message`）。
-- **首页留资**：在首页说“我们想在湖北做工程供货合作，帮我留个联系方式……”。首页表单地址必填，没给地址时返回 `validation_error`，Agent 应追问地址。
 - **没找到产品转留资**：在产品中心搜一个不存在的产品，结果提示可以留下需求；用户同意后跳转到在线留言页，再用 `request_message` 留资。
 - **取消提交**：第 10 步在确认框点“取消”，返回 `cancelled`，表单保留。
 - **缺必填项**：第 9 步不提供电话，返回 `validation_error`，Agent 追问电话。
@@ -687,8 +783,8 @@ addEventListener('pagehide', () => controller.abort());
 | A01 | 发现排序 | 修正后顾地排第 1；现状快照下顾地不在第 1，且标题与描述没有命中需求 | 演示外壳 |
 | A02 | 只读核实 | `inspect_supplier` 不跳转，返回原始信号，不附加判断 | 演示外壳 |
 | A03 | 确认后跳转 | 只有用户确认后才调用 `open_supplier_site`、`open_product_detail`；只出现在搜索结果中的候选返回 `not_available` | 演示外壳 / 网站开发 |
-| A04 | 工具随页面变化 | 与 4.2 总表一致：产品详情 7 项；首页、在线留言 6 项；关于、联系、产品列表等无表单页面 4 项 | 网站开发 |
-| A04a | 每页有留资路径 | 有表单的页面有且只有一组本页表单的留资工具；没有表单的页面不注册留资工具，Agent 按引导用 `open_site_page` 跳到在线留言页后完成留资 | 网站开发 |
+| A04 | 工具随页面变化 | 与 4.2 总表一致：产品详情 7 项；在线留言 6 项；首页、关于、联系、产品列表等 4 项 | 网站开发 |
+| A04a | 每页有留资路径 | 产品详情、在线留言各有一组本页表单的留资工具；其他页面（含首页）不注册留资工具，Agent 按引导用 `open_site_page` 跳到在线留言页后完成留资 | 网站开发 |
 | A04b | 下一步引导 | 公司信息、无结果搜索、产品详情的返回 `message` 含 6.4 的引导；提交成功后不承诺回复时间 | 网站开发 |
 | A05 | 公司信息 | 支持按主题返回；非法主题返回 `validation_error` | 网站开发 |
 | A06 | 产品查找 | “PVC 给水管”命中 PVC-U/UH给水管；按分类过滤正确；分页 `hasMore` 正确 | 网站开发 |

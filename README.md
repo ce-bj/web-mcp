@@ -64,7 +64,7 @@ Inspector 的聊天框与下方 **Tool / Input Arguments / Execute Tool** 是两
 
 ### 一期固定演示：顾地科技
 
-从首页（模拟搜索）开始，按每页右侧“本页提问脚本”依次提问，完整脚本、预期调用与验收标准见 [`webmcp-phase1-goody-demo.md`](./webmcp-phase1-goody-demo.md) 第 8、9 节。关键检查点：有表单的页面直接留资，没有表单的页面由 Agent 跳转到在线留言页再留资；搜索排序顾地第一；详情页 dn110 × 1.6MPa 查表得 6.6 mm；价格、交期不编造并引导留资；`request_quote` 只预填，`submit_quote` 页面确认后返回回执。点击首页的“现状快照”可演示发现层不修正时顾地排第 4。
+从首页（模拟搜索）开始，按每页右侧“本页提问脚本”依次提问，完整脚本、预期调用与验收标准见 [`webmcp-phase1-goody-demo.md`](./webmcp-phase1-goody-demo.md) 第 8、9 节。关键检查点：留资只接入两张表单——产品详情的“产品咨询”和在线留言页，其他页面由 Agent 跳转到在线留言页再留资；搜索排序顾地第一；详情页 dn110 × 1.6MPa 查表得 6.6 mm；价格、交期不编造并引导留资；`request_quote` 只预填，`submit_quote` 页面确认后返回回执。点击首页的“现状快照”可演示发现层不修正时顾地排第 4。
 
 ### 通用需求原型：市政排水管材
 
@@ -129,4 +129,4 @@ node --check demo/goody-views.js
 
 **希望访问者不手动开测试开关：**&#x6309; [Chrome WebMCP 文档](https://developer.chrome.com/docs/ai/webmcp/)申请当前 HTTPS 域名的 WebMCP Origin Trial，并按照 [Origin Trial 接入说明](https://developer.chrome.com/docs/web-platform/origin-trials)把该域名的有效 token 放入每个需要使用工具的页面的 `Origin-Trial` 响应头，或放入该页面 `<head>` 的 `<meta http-equiv="origin-trial" content="实际申请的 TOKEN">`。本演示的根目录 `index.html` 与 `demo/index.html` 都会注册工具，后台 `demo/admin.html` 不注册工具。Token 需要与访问页面的 origin 匹配；不能把示例占位字符串直接上传。Inspector 本身仍是开发测试工具，应按其文档使用支持的 Chrome 与测试开关。
 
-在目标页面的 Chrome DevTools Console 输入 `location.origin` 和 `typeof document.modelContext?.registerTool`：先确认访问的是 HTTPS 或本机 localhost；后者返回 `"function"` 才说明当前页面有注册接口。返回 `"undefined"` 时依次检查地址是否为安全上下文、浏览器版本、flag 或 Origin Trial token。接口可用后，模拟搜索页右上角应显示 `3 WebMCP tools ready`；顾地产品详情页 7 项，首页和在线留言页各 6 项，关于、联系、产品中心各 4 项（见一期文档 4.2 总表）；通用需求原型的产品列表页 2 项、详情页 3 项、询价页 2 项。
+在目标页面的 Chrome DevTools Console 输入 `location.origin` 和 `typeof document.modelContext?.registerTool`：先确认访问的是 HTTPS 或本机 localhost；后者返回 `"function"` 才说明当前页面有注册接口。返回 `"undefined"` 时依次检查地址是否为安全上下文、浏览器版本、flag 或 Origin Trial token。接口可用后，模拟搜索页右上角应显示 `3 WebMCP tools ready`；顾地产品详情页 7 项，在线留言页 6 项，首页、关于、联系、产品中心各 4 项（见一期文档 4.2 总表）；通用需求原型的产品列表页 2 项、详情页 3 项、询价页 2 项。

@@ -10,8 +10,7 @@ export const goodyPrompts = {
     '先帮我确认：这家公司是做什么的？是生产厂家吗？有哪些资质认证和生产基地？',
     '你们有适合城市供水的 PVC 给水管吗？',
     '好，打开 PVC-U/UH给水管 的详情。',
-    '（留资）我们想在湖北做工程供货合作，帮我留个联系方式：联系人王宁，电话 13800138000，邮箱 wang.ning@example.com，地址湖北省武汉市。',
-    '确认无误，请提交。'
+    '（留资）我们想在湖北做工程供货合作，帮我留个联系方式。'
   ],
   products: [
     '有没有 PVC 给水管？我要用于城市供水，dn110、1.6MPa。',
@@ -40,7 +39,7 @@ export const goodyPrompts = {
   ]
 };
 export const goodyPromptIntro = {
-  home: '进入官网后先确认公司，再查找产品。本页另有首页“代理商加盟 · 咨询”表单的留资工具 request_message。',
+  home: '进入官网后先确认公司，再查找产品。本页不接入留资表单：用户要留资时，用 open_site_page 跳转到在线留言页再填写。',
   products: '按分类或关键词查找产品；用户确认后再打开详情。本页没有留资表单：用户要留下需求时，用 open_site_page 跳转到在线留言页再填写。',
   detail: '规格从页面规格表回答；价格、交期官网未公开，引导用户在本页“产品咨询”表单留资。request_quote 只预填，submit_quote 还需页面确认。',
   company: '公司介绍、资质与联系方式都由 get_company_info 提供。本页没有留资表单：用户要留资时，用 open_site_page 跳转到在线留言页再填写。',
@@ -83,7 +82,7 @@ export function createGoodyPages(ctx) {
       <section class="goody-hero"><span class="eyebrow">ABOUT GOODY</span><h1>顾地科技 · 塑料管道系统解决方案供应商</h1><p>${e(companyTopics.profile.text)}</p><div class="goody-actions"><a class="button button-primary" href="${url('products')}">产品中心 ${icon('arrow')}</a><a class="button button-secondary" href="${url('company')}">关于顾地</a></div></section>
       <section class="goody-stats" aria-label="公司概况">${stats}</section>
       <section class="goody-block"><div class="goody-block-head"><h2>产品系列</h2><a class="text-link" href="${url('products')}">全部产品 ${icon('arrow')}</a></div><div class="goody-series-grid">${series}</div></section>
-      ${formSection('home-lead', '代理商加盟 · 咨询', '', '请填写相关信息并提交，工作人员会与您联系，或直接致电 400-105-1979。')}`, 'home');
+      <section class="goody-block goody-contact-strip"><div><h2>采购咨询</h2><p>选定产品后，在产品详情页“产品咨询”留下需求与联系方式；合作、经销等其他事项请在线留言，或致电 400-105-1979。</p></div><a class="button button-primary" href="${url('message')}">在线留言 ${icon('send')}</a></section>`, 'home');
   }
 
   function renderCompany() {
@@ -145,7 +144,7 @@ export function createGoodyPages(ctx) {
   }
 
   function formSection(anchor, title, context = '', intro = '带 * 为必填。Agent 可辅助预填；核对后您可以点击提交，或授权 Agent 提交并在页面确认。') {
-    const eyebrow = {'product-inquiry': 'PRODUCT INQUIRY', 'home-lead': 'JOIN & CONSULT'}[anchor] || 'ONLINE MESSAGE';
+    const eyebrow = anchor === 'product-inquiry' ? 'PRODUCT INQUIRY' : 'ONLINE MESSAGE';
     return `<section id="${anchor}" class="goody-form-section"><div class="page-title quote-title"><span class="eyebrow">${eyebrow}</span><h2>${e(title)}</h2><p>${e(intro)}</p></div>
       <form id="quote-form" novalidate>${context}<section class="contact-section"><div class="field-grid">${form.fields.map(fieldMarkup).join('')}</div></section><div id="form-status" class="form-status" role="status" aria-live="polite" hidden></div><div class="form-actions"><button type="submit" class="button button-primary">立即提交 ${icon('send')}</button><button type="reset" class="button button-secondary">清空填写</button></div></form></section>`;
   }
@@ -242,7 +241,7 @@ export function createGoodyPages(ctx) {
     })];
   }
   function messageTools() {
-    const where = {home: '本页“代理商加盟 · 咨询”表单', message: '本页“在线留言”表单'}[route.view];
+    const where = '本页“在线留言”表单';
     const common = '要就某款产品询价时，先打开该产品详情页使用 request_quote。电话、邮箱等必填信息用户没给时先询问，不要编造。';
     return formToolDefinitions({
       fillName: lead.fill, submitName: lead.submit,

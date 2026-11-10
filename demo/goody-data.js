@@ -180,31 +180,18 @@ export const goodyForms = {
       {key: 'email', label: '电子邮件', placeholder: '电子邮件地址', type: 'string', format: 'email', required: true},
       {key: 'message', label: '留言内容', placeholder: '请输入备注信息', type: 'string', required: true, multiline: true, webmcpDescription: '留言内容：采购需求、合作、经销、工程项目或售后等需要企业回复的事项'}
     ]
-  },
-  // 演示站首页 e_form-34：“代理商加盟”区块中的咨询表单，地址为必填。
-  homeLead: {
-    id: 'goody-home-lead', title: '代理商加盟 · 咨询', webmcp: true, multiItem: false, bindProduct: false,
-    realFieldNames: {contactName: 'e_input-38', phone: 'text1711009214758', email: 'email1720263342292', address: 'e_input-57', message: 'e_textarea-39'},
-    fields: [
-      {key: 'contactName', label: '你的姓名', placeholder: '你的姓名', type: 'string', required: false},
-      {key: 'phone', label: '您的电话', placeholder: '您的电话', type: 'string', required: true, webmcpDescription: '联系人电话号码（手机或座机）'},
-      {key: 'email', label: '您的邮箱', placeholder: '您的邮箱', type: 'string', format: 'email', required: true},
-      {key: 'address', label: '你的地址', placeholder: '你的地址', type: 'string', required: true, webmcpDescription: '联系地址或所在城市，如“湖北省武汉市”'},
-      {key: 'message', label: '咨询内容', placeholder: '请详细描述您需要咨询的问题，我们会及时安排客服与您联系', type: 'string', required: true, multiline: true, webmcpDescription: '咨询内容：代理加盟、采购需求、工程合作等需要企业回复的事项'}
-    ]
   }
 };
 
 /**
- * 留资方式只跟随页面上真实存在的表单，不为没有表单的页面增加留资工具：
+ * 一期只接入两张表单，不为其他页面增加留资工具：
  * - 产品详情：本页“产品咨询”表单 → request_quote / submit_quote（自动关联当前产品）
- * - 首页：本页“代理商加盟 · 咨询”表单 → request_message / submit_message
  * - 在线留言：本页“在线留言”表单 → request_message / submit_message
- * - 其余页面（关于、联系、产品中心等）：没有表单，用 open_site_page 跳转到在线留言页（redirect: 'message'）后再留资
+ * - 其余页面（首页、关于、联系、产品中心等）：用 open_site_page 跳转到在线留言页（redirect: 'message'）后再留资。
+ *   演示站首页虽有“代理商加盟”表单（e_form-34），一期不接入 WebMCP。
  */
 export function leadFormFor(view) {
   if (view === 'detail') return {form: goodyForms.inquiry, fill: 'request_quote', submit: 'submit_quote'};
-  if (view === 'home') return {form: goodyForms.homeLead, fill: 'request_message', submit: 'submit_message'};
   if (view === 'message') return {form: goodyForms.message, fill: 'request_message', submit: 'submit_message'};
   return {form: null, redirect: 'message'};
 }
