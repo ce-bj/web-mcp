@@ -2,6 +2,12 @@ import {availableAttrKeys, publicProducts} from './catalog.js';
 
 /** Inputs only: copy the JSON into Inspector's Input Arguments after selecting the named tool. */
 export function manualExamplesForPage({view,siteKey,product,form,rows=[],selectedProductId}){
+  if(view==='discover')return [
+    {name:'search_suppliers',purpose:'按采购需求搜索候选供应商官网',args:{query:'湖北 城市供水 PVC-U 给水管 dn110 1.6MPa 生产厂家 环保认证'}},
+    {name:'inspect_supplier',purpose:'进入前核实候选官网的公开信号',args:{siteId:'goody'}},
+    {name:'open_supplier_site',purpose:'用户确认后进入官网',args:{siteId:'goody'}}
+  ];
+  if(siteKey==='goody')return goodyExamples({view,product,selectedProductId});
   if(view==='products'){
     const first=publicProducts(siteKey)[0];
     const keyword=siteKey==='pipe'?'DN315 SN8':'6205-2RS';
@@ -33,4 +39,27 @@ export function manualExamplesForPage({view,siteKey,product,form,rows=[],selecte
     ];
   }
   return [];
+}
+
+const goodyGlobal=selectedProductId=>[
+  {name:'get_company_info',purpose:'确认公司身份、资质与生产基地',args:{topics:['profile','organization','honors']}},
+  {name:'search_products',purpose:'按关键词和分类查找产品',args:{keyword:'PVC 给水管',categoryId:'water'}},
+  {name:'open_product_detail',purpose:'用户确认后打开候选详情',args:selectedProductId===null?null:{productId:selectedProductId||'pvcu-uh-water'},note:selectedProductId===null?'先查到一款产品，才能打开详情。':''},
+  {name:'open_site_page',purpose:'打开固定页面；没有留资表单的页面用它跳转到在线留言页',args:{page:'message'}}
+];
+function goodyExamples({view,product,selectedProductId}){
+  const contact={contactName:'王宁',phone:'13800138000',email:'wang.ning@example.com'};
+  const submitNote='先完成填写并核对；页面出现确认框时由用户确认。';
+  if(view==='detail')return [
+    {name:'get_product_detail',purpose:'读取当前产品的规格表与认证',args:{sections:['specTables','certifications']}},
+    {name:'request_quote',purpose:'预填“产品咨询”表单，待用户核对',args:{...contact,region:'湖北武汉',inquiryContent:`咨询 ${product.name}：dn110、1.6MPa，约 2000 米，项目在湖北武汉，希望 12 月中旬供货。请确认价格、交期，并提供检测报告。`}},
+    {name:'submit_quote',purpose:'核对后提交并取得结果；执行时还需页面确认',args:{},note:submitNote},
+    ...goodyGlobal(selectedProductId).slice(0,2)
+  ];
+  // 只有首页和在线留言页有留资表单；其余页面没有留资工具，用 open_site_page 跳转到在线留言页。
+  if(view!=='home'&&view!=='message')return goodyGlobal(selectedProductId);
+  const fill=view==='home'
+    ?{name:'request_message',purpose:'预填首页“代理商加盟 · 咨询”表单（地址必填）',args:{...contact,address:'湖北省武汉市',message:'我们想在湖北做工程供货合作，请联系我。'}}
+    :{name:'request_message',purpose:'预填“在线留言”表单，待用户核对',args:{...contact,message:'需要 DN1000 以上的市政排水管约 500 米，也想了解工程合作和经销政策，请联系我。'}};
+  return [fill,{name:'submit_message',purpose:'核对后提交并取得结果；执行时还需页面确认',args:{},note:submitNote},...goodyGlobal(selectedProductId)];
 }

@@ -1,17 +1,28 @@
 import {sites,formDefinitions,publicProducts,getProduct,fieldDescription,availableAttrKeys,specSchema,quoteSchema,searchCatalog} from './catalog.js';
 import {manualExamplesForPage} from './manual-examples.js';
 import {saveDemoInquiry} from './submission.js';
+import {suppliers,searchSuppliers,inspectSupplier,signalsFor,goodyIssues,GOODY_SNAPSHOT_DATE,GOODY_URL,GOODY_PRODUCT_URL} from './discovery.js';
+import {goodySite,goodyProducts,goodyProduct,leadFormFor} from './goody-data.js';
+import {createGoodyPages,GOODY_VIEWS,goodyPrompts,goodyPromptIntro} from './goody-views.js';
 
 const $=selector=>document.querySelector(selector);
 const params=new URLSearchParams(location.search);
-const route={view:params.get('view')||'compare',site:params.get('site')||'pipe',product:params.get('product')||''};
-if(!sites[route.site])route.site='pipe';
-if(!['compare','products','detail','quote'].includes(route.view))route.view='compare';
-const site=sites[route.site];
-const product=getProduct(route.site,route.product)||publicProducts(route.site)[0];
-const form=formDefinitions[route.site];
-document.title=route.view==='compare'?'两家官网 · WebMCP 询价演示':`${site.name}｜${({products:'所有产品',detail:product.name,quote:form.title})[route.view]}`;
-const pageUrl=(view,siteKey=route.site,productId='')=>`./index.html?view=${view}&site=${siteKey}${productId?`&product=${encodeURIComponent(productId)}`:''}`;
+const route={view:params.get('view')||'discover',site:params.get('site')||'pipe',product:params.get('product')||'',category:params.get('category')||''};
+if(route.view==='compare')route.view='discover';
+const isGoody=route.site==='goody';
+if(!sites[route.site]&&!isGoody)route.site='pipe';
+if(route.view!=='discover'&&!(isGoody?GOODY_VIEWS:['products','detail','quote']).includes(route.view))route.view=isGoody?'home':'discover';
+// 默认展示一期修正后的发现层信号；?meta=current 对照演示站当前快照。
+const metaMode=params.get('meta')==='current'?'current':'fixed';
+const site=isGoody?goodySite:sites[route.site];
+const product=isGoody?(goodyProduct(route.product)||goodyProducts[0]):(getProduct(route.site,route.product)||publicProducts(route.site)[0]);
+const lead=isGoody?leadFormFor(route.view):null;
+const form=isGoody?(lead.form||null):formDefinitions[route.site];
+const goodyTitles={home:'首页',company:'关于顾地',contact:'联系我们',products:'产品中心',detail:product.name,message:'在线留言'};
+document.title=route.view==='discover'?'发现与选择 · WebMCP 询价演示':isGoody?`${goodyTitles[route.view]}｜顾地科技 · 塑料管道系统生产厂家`:`${site.name}｜${({products:'所有产品',detail:product.name,quote:form.title})[route.view]}`;
+const pageUrl=(view,siteKey=route.site,productId='')=>view==='discover'?discoverUrl():`./index.html?view=${view}&site=${siteKey}${productId?`&product=${encodeURIComponent(productId)}`:''}`;
+const discoverUrl=(mode=metaMode)=>`./index.html?view=discover${mode==='current'?'&meta=current':''}`;
+const DISCOVER_QUERY='我在湖北做城市供水项目，需要 PVC-U 给水管 dn110、1.6MPa，约 2000 米。要求是生产厂家，有环保或卫生相关认证。';
 const demoFileUrl=file=>new URL(file,import.meta.url).href;
 const e=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const urlForProduct=(id)=>new URL(pageUrl('detail',route.site,id),location.href).href;
@@ -33,12 +44,21 @@ function navItem(label,href,active,small=''){
   return `<a class="nav-item ${active?'active':''}" href="${href}" ${active?'aria-current="page"':''}><span>${e(label)}</span>${small?`<small>${e(small)}</small>`:''}</a>`;
 }
 function renderShell(){
-  document.body.dataset.site=route.view==='compare'?'neutral':route.site;
-  const currentLabel=route.view==='compare'?'官网选择':route.view==='products'?'全部产品':route.view==='detail'?'产品详情':'在线询价';
+  document.body.dataset.site=route.view==='discover'?'neutral':route.site;
+  const currentLabel=route.view==='discover'?'发现与选择':isGoody?goodyTitles[route.view]:route.view==='products'?'全部产品':route.view==='detail'?'产品详情':'在线询价';
+  const g=view=>isGoody&&route.view===view;
   $('#app').innerHTML=`
     <aside class="sidebar" aria-label="演示页面切换">
       <div class="side-logo"><span class="logo-mark">W</span><div><strong>WebMCP Lab</strong><span>询价场景演示 · 0.x</span></div></div>
-      <div class="nav-group"><p>体验起点</p>${navItem('两家官网 · 发现与理解',pageUrl('compare'),route.view==='compare')}</div>
+      <div class="nav-group"><p>体验起点</p>${navItem('多家公司 · 发现与选择',discoverUrl(),route.view==='discover','search_suppliers')}</div>
+      <div class="nav-group"><p><span class="nav-dot goody-dot"></span> 顾地科技 · 一期演示</p>
+        ${navItem('官网首页',pageUrl('home','goody'),g('home'),'公司 · 查找')}
+        ${navItem('产品中心',pageUrl('products','goody'),g('products'),'search_products')}
+        ${navItem('产品详情',pageUrl('detail','goody','pvcu-uh-water'),g('detail'),'规格 · 留资')}
+        ${navItem('关于顾地',pageUrl('company','goody'),g('company')||g('contact'),'get_company_info')}
+        ${navItem('在线留言',pageUrl('message','goody'),g('message'),'留言 · 提交')}
+      </div>
+      <p class="nav-section">通用需求原型</p>
       <div class="nav-group"><p><span class="nav-dot pipe-dot"></span> 澄川管业</p>
         ${navItem('所有产品',pageUrl('products','pipe'),route.view==='products'&&route.site==='pipe','search_products')}
         ${navItem('产品详情',pageUrl('detail','pipe','pipe-315'),route.view==='detail'&&route.site==='pipe','规格 · 交期')}
@@ -49,18 +69,15 @@ function renderShell(){
         ${navItem('产品详情',pageUrl('detail','bearing','bearing-6205'),route.view==='detail'&&route.site==='bearing','规格 · 交期')}
         ${navItem('产品询价',pageUrl('quote','bearing','bearing-6205'),route.view==='quote'&&route.site==='bearing','预填 · 提交')}
       </div>
-      <div class="sidebar-bottom"><span class="mini-label">测试方式</span><p>在 Chrome 中打开本页，使用 Model Context Tool Inspector 对当前页提问。</p><a href="${demoFileUrl('../README.md')}" target="_blank" rel="noopener">查看测试脚本 ${icon('arrow')}</a></div>
+      <div class="sidebar-bottom"><span class="mini-label">测试方式</span><p>在 Chrome 中打开本页，使用 Model Context Tool Inspector 对当前页提问。</p><a href="${demoFileUrl('../README.md')}" target="_blank" rel="noopener">查看测试脚本 ${icon('arrow')}</a><a href="${GOODY_URL}" target="_blank" rel="noopener">顾地真实演示站 ${icon('external')}</a></div>
     </aside>
     <div class="workspace">
-      <header class="topbar"><div class="crumb">演示工作台 <span>/</span> ${route.view==='compare'?'官网选择':e(site.name)} <span>/</span> <strong>${currentLabel}</strong></div><div class="top-actions"><a class="admin-link" href="${demoFileUrl('admin.html')}" aria-label="打开 WebMCP 后台配置原型">后台配置 ↗</a><span id="tool-badge" class="tool-badge pending" role="status" aria-live="polite"><span class="pulse"></span>检查 WebMCP…</span></div></header>
+      <header class="topbar"><div class="crumb">演示工作台 <span>/</span> ${route.view==='discover'?'模拟搜索':e(site.name)} <span>/</span> <strong>${currentLabel}</strong></div><div class="top-actions"><a class="admin-link" href="${demoFileUrl('admin.html')}" aria-label="打开 WebMCP 后台配置原型">后台配置 ↗</a><span id="tool-badge" class="tool-badge pending" role="status" aria-live="polite"><span class="pulse"></span>检查 WebMCP…</span></div></header>
       <main id="main" tabindex="-1"></main>
     </div>`;
 }
 
 const prompts={
-  compare:[
-    '我要找市政排水用双壁波纹管，DN315、SN8，大约 1200 米。比较这两个官网简介，告诉我应该先进入哪家官网，并说明依据。'
-  ],
   products:[
     '你们有适合市政排水用的 DN315、SN8 双壁波纹管吗？',
     '好，打开这款产品的详情。'
@@ -90,10 +107,17 @@ const bearingPrompts={
     '我已经核对表单，信息无误。请提交这份询价，并告诉我回执编号。'
   ]
 };
+const discoverPrompts=[
+  `${DISCOVER_QUERY}帮我搜索合适的供应商官网，比较后告诉我应该先进入哪家，并说明理由。`,
+  '进入之前，帮我核实一下你推荐的这家官网：是不是生产厂家，公开信息是否一致？',
+  '好，打开这家公司的官网。',
+  '换一个需求：我要找市政排水用 HDPE 双壁波纹管 DN315、SN8，大约 1200 米。哪家更合适？'
+];
 function promptPanel(view){
-  const list=(route.site==='bearing'&&bearingPrompts[view]?bearingPrompts[view]:prompts[view]).map((p,i)=>`<div class="prompt-item"><span>${String(i+1).padStart(2,'0')}</span><p>${e(p)}</p><button type="button" class="copy-prompt" data-text="${e(p)}" aria-label="复制第 ${i+1} 条提问">复制</button></div>`).join('');
-  const intro={compare:'用自然语言比较官网简介；此页没有 WebMCP 工具。',products:'像采购用户一样提问。Agent 找到产品后询问是否打开；您确认后页面自动跳转。',detail:'继续问规格与交期；表达询价意向后，Agent 可打开原表单。',quote:'先让 Agent 预填表单；您核对后可自行点击提交，或明确授权 Agent 调用 submit_quote，页面会再次请您确认。'}[view];
-  return `<aside class="prompt-panel" aria-labelledby="prompt-title"><div class="panel-heading"><div><span class="eyebrow">MODEL CONTEXT TOOL INSPECTOR</span><h2 id="prompt-title">本页提问脚本</h2></div>${icon('doc')}</div><p class="panel-intro">${intro}</p>${list}${manualMarkup()}<div class="panel-foot">工具只在当前页面注册。跳转后请在 Inspector 中重新读取当前页工具。</div></aside>`;
+  const promptList=route.view==='discover'?discoverPrompts:isGoody?goodyPrompts[view]:(route.site==='bearing'&&bearingPrompts[view]?bearingPrompts[view]:prompts[view]);
+  const list=promptList.map((p,i)=>`<div class="prompt-item"><span>${String(i+1).padStart(2,'0')}</span><p>${e(p)}</p><button type="button" class="copy-prompt" data-text="${e(p)}" aria-label="复制第 ${i+1} 条提问">复制</button></div>`).join('');
+  const intro=route.view==='discover'?'模拟搜索引擎：Agent 用 search_suppliers 比较候选，用 inspect_supplier 核实，用户确认后 open_supplier_site 进入官网。此页工具只属于演示外壳。':isGoody?goodyPromptIntro[view]:{products:'像采购用户一样提问。Agent 找到产品后询问是否打开；您确认后页面自动跳转。',detail:'继续问规格与交期；表达询价意向后，Agent 可打开原表单。',quote:'先让 Agent 预填表单；您核对后可自行点击提交，或明确授权 Agent 调用 submit_quote，页面会再次请您确认。'}[view];
+  return `<aside class="prompt-panel" aria-labelledby="prompt-title"><div class="panel-heading"><div><span class="eyebrow">MODEL CONTEXT TOOL INSPECTOR</span><h2 id="prompt-title">本页提问脚本</h2></div>${icon('doc')}</div><p class="panel-intro">${intro}</p>${list}${manualMarkup()}${route.view==='discover'?signalNotes():''}<div class="panel-foot">工具只在当前页面注册。跳转后请在 Inspector 中重新读取当前页工具。</div></aside>`;
 }
 function manualMarkup(){
   currentManualExamples=manualExamplesForPage({view:route.view,siteKey:route.site,product,form,rows,selectedProductId:selectedSearchProductId});
@@ -123,13 +147,37 @@ function wirePromptCopy(){
   wireManualCopy();
 }
 
-function renderCompare(){
+function signalNotes(){
+  const rows=goodyIssues.map(x=>`<tr><th scope="row">${e(x.item)}</th><td>${e(x.current)}</td><td>${e(x.fixed)}</td></tr>`).join('');
+  return `<details class="signal-notes"><summary>演示说明：顾地发现层信号对照</summary><p>“现状”取自 ${GOODY_SNAPSHOT_DATE} 演示站快照；“一期修正后”是本演示顾地官网采用的内容。按场景需求搜索，现状下顾地排第 4，摘要看不出是管材厂；修正后排第 1。</p><div class="signal-table-wrap"><table class="signal-table"><thead><tr><th>信号</th><th>现状</th><th>一期修正后</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
+function serpItem(r){
+  const supplier=suppliers.find(x=>x.id===r.siteId);
+  const action=supplier.openUrl?`<a class="text-link" href="${e(supplier.openUrl)}">进入官网 ${icon('arrow')}</a>`:'<span class="serp-na">仅搜索结果</span>';
+  const chips=[...r.matchedInSnippet.map(t=>`<span class="hit">${e(t)}</span>`),...r.matchedElsewhere.map(t=>`<span class="body-hit" title="只在正文、结构化数据或 llms.txt 中命中">${e(t)}</span>`)].join('');
+  return `<article class="serp-item" id="serp-${e(r.siteId)}"><span class="serp-rank">${r.rank}</span><div class="serp-body"><p class="serp-url">${e(r.url)}</p><h3>${e(r.title)}</h3><p class="serp-snippet">${e(r.snippet)}</p><div class="serp-match">${chips}</div></div><div class="serp-action">${action}</div></article>`;
+}
+function applySupplierSearch(query,result){
+  $('#supplier-query').value=query;
+  $('#serp-results').innerHTML=result.results.map(serpItem).join('');
+  const status=$('#serp-status');
+  status.textContent=result.results.length?`${result.results.length} 个候选，按需求与站点摘要的匹配度排序。深色词在标题/描述中命中，浅色词只在正文或结构化数据中命中。`:'没有匹配的候选，请换一种描述。';
+}
+function highlightSupplier(siteId){
+  document.querySelectorAll('.serp-item').forEach(n=>n.classList.toggle('inspected',n.id===`serp-${siteId}`));
+  document.getElementById(`serp-${siteId}`)?.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function renderDiscover(){
+  const modeLink=(mode,label)=>`<a href="${discoverUrl(mode)}" class="${metaMode===mode?'active':''}" ${metaMode===mode?'aria-current="true"':''}>${label}</a>`;
   $('#main').innerHTML=`<div class="page-grid"><div class="content-column">
-    <div class="intro-band"><span class="eyebrow">01 / FIND THE RIGHT SITE</span><h1>先找到合适的官网，再开始产品咨询</h1><p>这是“发现、理解”阶段的模拟入口。下方站点摘要帮助 Agent 比较业务范围；进入官网后，产品查询才由页面内的 WebMCP 工具完成。</p></div>
-    <section class="site-choice" aria-label="两个官网">
-      ${Object.entries(sites).map(([key,s])=>`<article class="site-card ${s.color}"><div class="site-card-top"><span class="site-symbol">${s.initials}</span><span class="site-tag">模拟官网</span></div><p class="site-overline">${e(s.english)}</p><h2>${e(s.name)}</h2><p class="site-category">${e(s.category)}</p><p class="site-summary">${e(s.summary)}</p><div class="site-facts"><span>${icon('box')} ${publicProducts(key).length} 款公开产品</span><span>${e(s.location)}</span></div><a class="button button-primary" href="${pageUrl('products',key)}">进入官网 ${icon('arrow')}</a></article>`).join('')}
-    </section><div class="info-strip"><span class="info-icon">i</span><div><strong>场景设定</strong><p>用户需要“市政排水用 DN315 / SN8 双壁波纹管”。澄川管业的业务范围匹配；衡星精密销售轴承。站点摘要仅用于模拟发现与理解，不注册 WebMCP 工具。</p></div></div>
-  </div>${promptPanel('compare')}</div>`;
+    <div class="intro-band"><span class="eyebrow">01 / DISCOVER</span><h1>从多家公司中找到合适的供应商官网</h1><p>模拟搜索引擎或 Agent 自身的检索：每条结果只有该站公开的标题、网址和描述。进入官网后，公司介绍、产品查询和留资才由该站的 WebMCP 工具完成。</p></div>
+    <div class="meta-toggle" role="group" aria-label="顾地官网的发现层信号"><span>顾地官网信号</span>${modeLink('fixed','一期修正后')}${modeLink('current',`现状快照 ${GOODY_SNAPSHOT_DATE}`)}</div>
+    <form id="supplier-search" class="supplier-search" role="search"><label for="supplier-query">采购需求</label><div><textarea id="supplier-query" rows="2">${e(DISCOVER_QUERY)}</textarea><button type="submit" class="button button-primary">${icon('search')} 搜索</button></div></form>
+    <p id="serp-status" class="serp-status" role="status" aria-live="polite"></p>
+    <section id="serp-results" class="serp-list" aria-label="搜索结果"></section>
+  </div>${promptPanel('discover')}</div>`;
+  $('#supplier-search').addEventListener('submit',ev=>{ev.preventDefault();const q=$('#supplier-query').value;applySupplierSearch(q,searchSuppliers(q,metaMode));});
+  applySupplierSearch(DISCOVER_QUERY,searchSuppliers(DISCOVER_QUERY,metaMode));
   wirePromptCopy();
 }
 
@@ -194,8 +242,7 @@ function renderQuote(){
     <form id="quote-form" novalidate>${quoteItem}<section class="contact-section"><div class="section-head"><div><span class="eyebrow">CONTACT & REQUIREMENTS</span><h2>联系信息与需求</h2></div><span class="section-icon">${icon('doc')}</span></div><div class="field-grid">${form.fields.map(fieldMarkup).join('')}</div></section><div id="form-status" class="form-status" role="status" aria-live="polite" hidden></div><div class="form-actions"><button type="submit" class="button button-primary">提交询价 ${icon('send')}</button><button type="reset" class="button button-secondary">清空填写</button></div></form>
     <div class="inline-note">${icon('check')} <span>演示使用浏览器本地存储模拟原表单回执。<strong>request_quote 只预填</strong>；手动点击提交，或在页面确认 Agent 的 submit_quote 后，才会生成本地演示回执，不会发送给真实企业。</span></div>
   </div>${promptPanel('quote')}</div>`;
-  $('#quote-form').addEventListener('submit',submitQuote);
-  $('#quote-form').addEventListener('reset',()=>{lastSubmission=null;setTimeout(()=>{const status=$('#form-status');status.hidden=true;clearErrors();document.querySelectorAll('.item-row input').forEach(i=>i.value='');},0);});
+  wireQuoteForm();
   if(form.multiItem){
     $('#add-row').addEventListener('click',()=>{
       const next=Math.max(0,...rows.map(r=>Number(r.ref.split('_')[1])))+1;
@@ -205,6 +252,10 @@ function renderQuote(){
     wireRowEvents();
   }
   wirePromptCopy();
+}
+function wireQuoteForm(){
+  $('#quote-form').addEventListener('submit',submitQuote);
+  $('#quote-form').addEventListener('reset',()=>{lastSubmission=null;setTimeout(()=>{const status=$('#form-status');status.hidden=true;clearErrors();document.querySelectorAll('.item-row input').forEach(i=>i.value='');},0);});
 }
 function wireRowEvents(){
   document.querySelectorAll('.remove-row').forEach(btn=>{
@@ -238,20 +289,20 @@ function validateForm(){
 function currentInquiryDraft(){
   return {
     site:route.site,formId:form.id,
-    productIds:form.multiItem?rows.map(r=>r.productId):[product.id],
+    productIds:form.multiItem?rows.map(r=>r.productId):form.bindProduct===false?[]:[product.id],
     items:form.multiItem?rows.map(row=>({rowRef:row.ref,productId:row.productId,...Object.fromEntries(form.lineFields.map(field=>[field.key,$(`#${field.key}-${row.ref}`).value]))})):[],
     fields:Object.fromEntries(form.fields.map(field=>[field.key,$(`#field-${field.key}`).value]))
   };
 }
 function submitCurrentInquiry(){
   const errors=validateForm();
-  if(Object.keys(errors).length){setStatus('请按字段提示修正后再提交。','error');$(`#field-${Object.keys(errors)[0]}`).focus();return {status:'validation_error',fieldErrors:errors,message:'询价尚未提交，请修正页面标出的字段。'};}
+  if(Object.keys(errors).length){setStatus('请按字段提示修正后再提交。','error');$(`#field-${Object.keys(errors)[0]}`).focus();return {status:'validation_error',fieldErrors:errors,message:'尚未提交，请修正页面标出的字段。'};}
   const result=saveDemoInquiry(currentInquiryDraft(),{storage:inquiryStorage,previous:lastSubmission});
   if(result.status==='submitted'){
     lastSubmission=result;
     setStatus(`演示表单已接收，回执 ${result.receipt.id}。这是浏览器本地模拟记录，并未发送给真实企业。`,'success');
     $('#form-status').scrollIntoView({behavior:'smooth',block:'center'});
-    return {status:'submitted',receipt:result.receipt,reused:result.reused,message:'已生成浏览器本地演示回执，未发送给真实企业。'};
+    return {status:'submitted',receipt:result.receipt,reused:result.reused,message:'已提交并生成浏览器本地演示回执（未发送给真实企业）。请告诉用户已提交、附上回执编号，不要承诺回复时间；可再问用户是否还要了解其他产品或公司信息。'};
   }
   setStatus(result.message,'error');
   return result;
@@ -265,8 +316,87 @@ function toolResult(value){return JSON.stringify(value);}
 function readOnlyAnnotations(){return {readOnlyHint:true,consequentialHint:false,untrustedContentHint:true};}
 function navigationAnnotations(){return {readOnlyHint:false,consequentialHint:false,untrustedContentHint:true};}
 function navigateAfterResult(url){setTimeout(()=>location.assign(url),80);}
+function fillCurrentForm(args={}){
+  const allKeys=['items',...form.fields.map(f=>f.key)];
+  if(Object.keys(args).some(k=>!allKeys.includes(k)))return toolResult({status:'validation_error',message:'输入包含当前表单不存在的字段；请重新读取工具定义。'});
+  if(form.multiItem&&args.items!==undefined){
+    if(!Array.isArray(args.items))return toolResult({status:'validation_error',message:'items 必须是商品行数组。'});
+    for(const item of args.items){
+      const row=rows.find(r=>r.ref===item.rowRef);
+      if(!row)return toolResult({status:'validation_error',message:'商品行引用已失效；请重新读取本页工具定义。'});
+      if(Object.keys(item).some(k=>k!=='rowRef'&&!form.lineFields.some(f=>f.key===k)))return toolResult({status:'validation_error',message:'商品行包含不可填写字段。'});
+    }
+    for(const item of args.items){for(const f of form.lineFields)if(item[f.key]!==undefined){const input=$(`#${f.key}-${item.rowRef}`);input.value=String(item[f.key]);input.dispatchEvent(new Event('input',{bubbles:true}));}}
+  }
+  for(const f of form.fields)if(args[f.key]!==undefined){const input=$(`#field-${f.key}`);input.value=String(args[f.key]);input.dispatchEvent(new Event('input',{bubbles:true}));}
+  const errors=validateForm();
+  $('#quote-form').scrollIntoView({behavior:'smooth',block:'start'});
+  if(Object.keys(errors).length){setStatus('已保留本次填写内容，请补齐或修正标出的字段。','error');return toolResult({status:'validation_error',fieldErrors:errors,message:'表单尚未提交；请补齐或修正字段后再核对。'});}
+  setStatus('WebMCP 已将信息填写到页面。请核对后自行提交，或确认后让 Agent 提交。','ready');
+  const submitName=isGoody?lead.submit:'submit_quote';
+  return toolResult({status:'awaiting_user_confirmation',message:`已预填“${form.title}”表单，本次预填没有提交。请用户核对；用户确认后可调用 ${submitName}，也可自行点击提交按钮。`,form:form.title});
+}
+function submitWithConfirmation(args,submitName){
+  if(!args||typeof args!=='object'||Array.isArray(args)||Object.keys(args).length)return toolResult({status:'validation_error',message:`${submitName} 只接收空对象；请先在页面填写并核对。`});
+  const errors=validateForm();
+  if(Object.keys(errors).length){setStatus('请按字段提示修正后再提交。','error');$(`#field-${Object.keys(errors)[0]}`).focus();return toolResult({status:'validation_error',fieldErrors:errors,message:'尚未提交，请修正页面标出的字段。'});}
+  if(lastSubmission?.status==='submitted'&&lastSubmission.signature===JSON.stringify(currentInquiryDraft()))return toolResult(submitCurrentInquiry());
+  if(!window.confirm(`请确认提交当前可见的“${form.title}”表单给 ${site.name}？演示环境只会生成浏览器本地回执。`)){
+    setStatus('您已取消提交，表单仍可修改。','ready');
+    return toolResult({status:'cancelled',message:'用户取消提交，本次未生成记录。'});
+  }
+  return toolResult(submitCurrentInquiry());
+}
+function discoverTools(){
+  const ids=suppliers.map(x=>x.id);
+  return [{
+    name:'search_suppliers',description:'模拟搜索引擎：按采购需求搜索候选供应商官网，返回排序后的标题、网址和摘要。结果只是各站公开的发现层信息，尚未核实；请比较后向用户说明推荐理由，可用 inspect_supplier 核实，用户确认后再调用 open_supplier_site。',
+    inputSchema:{type:'object',properties:{query:{type:'string',description:'用自然语言描述采购需求，如产品、材质、规格、地区、对供应商的要求。'}},required:['query'],additionalProperties:false},
+    annotations:readOnlyAnnotations(),
+    execute:async({query=''}={})=>{
+      if(!String(query).trim()||String(query).trim()==='example_string')return toolResult({status:'validation_error',message:'请用真实采购需求作为 query，例如“湖北 PVC 给水管 生产厂家”。'});
+      const result=searchSuppliers(query,metaMode);
+      if(route.view==='discover')applySupplierSearch(query,result);
+      return toolResult({status:'ok',query,results:result.results.map(({rank,siteId,title,url,snippet})=>({rank,siteId,title,url,snippet})),message:result.results.length?'这些是搜索摘要，尚未核实。请比较后向用户说明理由；进入前可调用 inspect_supplier 核实。':'没有匹配的候选，请换一种描述。'});
+    }
+  },{
+    name:'inspect_supplier',description:'读取某个候选站点首页公开的发现层信息（title、meta 描述、og、html lang、JSON-LD 组织与 FAQ、llms.txt），用于进入前核实它是否就是要找的公司。只读，不打开网站。',
+    inputSchema:{type:'object',properties:{siteId:{type:'string',enum:ids,description:'使用 search_suppliers 返回的 siteId。'}},required:['siteId'],additionalProperties:false},
+    annotations:readOnlyAnnotations(),
+    execute:async({siteId}={})=>{
+      const info=inspectSupplier(siteId,metaMode);
+      if(!info)return toolResult({status:'validation_error',message:'未知的 siteId，请先调用 search_suppliers。'});
+      if(route.view==='discover')highlightSupplier(siteId);
+      return toolResult({status:'ok',...info,message:'以上是该站公开的原始信号，请自行判断是否一致、是否符合用户需求。'});
+    }
+  },{
+    name:'open_supplier_site',description:'用户确认要进入某家候选公司的官网后调用，在当前标签页打开该官网首页。进入后请重新读取新页面的 WebMCP 工具。',
+    inputSchema:{type:'object',properties:{siteId:{type:'string',enum:ids,description:'使用 search_suppliers 返回的 siteId。'}},required:['siteId'],additionalProperties:false},
+    annotations:navigationAnnotations(),
+    execute:async({siteId}={})=>{
+      const supplier=suppliers.find(x=>x.id===siteId);
+      if(!supplier)return toolResult({status:'validation_error',message:'未知的 siteId，请先调用 search_suppliers。'});
+      if(!supplier.openUrl)return toolResult({status:'not_available',siteId,message:'该候选只出现在模拟搜索结果中，没有可进入的演示官网。'});
+      navigateAfterResult(new URL(supplier.openUrl,location.href).href);
+      return toolResult({status:'opening',siteId,title:signalsFor(supplier,metaMode).title,message:'正在打开官网首页；进入后请重新读取该页工具。'});
+    }
+  }];
+}
+function formToolDefinitions({fillName,submitName,fillDescription,submitDescription}){
+  return [{
+    name:fillName,description:fillDescription,
+    inputSchema:quoteSchema(form,rows),annotations:{readOnlyHint:false,consequentialHint:false,untrustedContentHint:true},
+    execute:async(args={})=>fillCurrentForm(args)
+  },{
+    name:submitName,description:submitDescription,
+    inputSchema:{type:'object',properties:{},additionalProperties:false},
+    annotations:{readOnlyHint:false,consequentialHint:true,untrustedContentHint:true},
+    execute:async(args={})=>submitWithConfirmation(args,submitName)
+  }];
+}
 function toolDefinitions(){
-  if(route.view==='compare')return [];
+  if(route.view==='discover')return discoverTools();
+  if(isGoody)return goodyPages.tools();
   if(route.view==='products')return [{
     name:'search_products',description:`根据采购需求查询${site.name}官网已开放的产品，不填关键词时浏览产品。查询结果也会显示在当前页面；找到候选后先介绍产品并询问用户是否打开详情。`,
     inputSchema:{type:'object',properties:{keyword:{type:'string',description:'产品名称、型号或公开规格关键词；不填时浏览本站产品。'},page:{type:'integer',minimum:1,default:1,description:'结果页码，默认第 1 页。'}},additionalProperties:false},
@@ -311,44 +441,11 @@ function toolDefinitions(){
       return toolResult({status:'opening',product:product.name,message:'正在打开当前产品的询价表单；表单不会自动提交。'});
     }
   }];
-  if(route.view==='quote'&&form.webmcp)return [{
-    name:'request_quote',description:`填写${site.name}本页“${form.title}”表单，供用户在页面核对；本工具不提交询价。`,
-    inputSchema:quoteSchema(form,rows),annotations:{readOnlyHint:false,consequentialHint:false,untrustedContentHint:true},
-    execute:async(args={})=>{
-      const allKeys=['items',...form.fields.map(f=>f.key)];
-      if(Object.keys(args).some(k=>!allKeys.includes(k)))return toolResult({status:'validation_error',message:'输入包含当前表单不存在的字段；请重新读取工具定义。'});
-      if(form.multiItem&&args.items!==undefined){
-        if(!Array.isArray(args.items))return toolResult({status:'validation_error',message:'items 必须是商品行数组。'});
-        for(const item of args.items){
-          const row=rows.find(r=>r.ref===item.rowRef);
-          if(!row)return toolResult({status:'validation_error',message:'商品行引用已失效；请重新读取本页工具定义。'});
-          if(Object.keys(item).some(k=>k!=='rowRef'&&!form.lineFields.some(f=>f.key===k)))return toolResult({status:'validation_error',message:'商品行包含不可填写字段。'});
-        }
-        for(const item of args.items){for(const f of form.lineFields)if(item[f.key]!==undefined){const input=$(`#${f.key}-${item.rowRef}`);input.value=String(item[f.key]);input.dispatchEvent(new Event('input',{bubbles:true}));}}
-      }
-      for(const f of form.fields)if(args[f.key]!==undefined){const input=$(`#field-${f.key}`);input.value=String(args[f.key]);input.dispatchEvent(new Event('input',{bubbles:true}));}
-      const errors=validateForm();
-      $('#quote-form').scrollIntoView({behavior:'smooth',block:'start'});
-      if(Object.keys(errors).length){setStatus('已保留本次填写内容，请补齐或修正标出的字段。','error');return toolResult({status:'validation_error',fieldErrors:errors,message:'表单尚未提交；请补齐或修正字段后再核对。'});}
-      setStatus('WebMCP 已将信息填写到页面。请核对商品、数量和联系信息；可自行提交，或确认后让 Agent 提交。','ready');
-      return toolResult({status:'awaiting_user_confirmation',message:'已预填在线询价表单，本次预填没有提交。请用户核对；用户确认后可调用 submit_quote，也可自行点击提交询价。',form:form.title});
-    }
-  },{
-    name:'submit_quote',description:`用户已核对${site.name}当前“${form.title}”表单并明确要求提交后调用。使用页面当前值，要求用户在浏览器确认，调用原提交处理，并返回实际结果与回执；不要在预填后自动调用。`,
-    inputSchema:{type:'object',properties:{},additionalProperties:false},
-    annotations:{readOnlyHint:false,consequentialHint:true,untrustedContentHint:true},
-    execute:async(args={})=>{
-      if(!args||typeof args!=='object'||Array.isArray(args)||Object.keys(args).length)return toolResult({status:'validation_error',message:'submit_quote 只接收空对象；请先在页面填写并核对。'});
-      const errors=validateForm();
-      if(Object.keys(errors).length){setStatus('请按字段提示修正后再提交。','error');$(`#field-${Object.keys(errors)[0]}`).focus();return toolResult({status:'validation_error',fieldErrors:errors,message:'询价尚未提交，请修正页面标出的字段。'});}
-      if(lastSubmission?.status==='submitted'&&lastSubmission.signature===JSON.stringify(currentInquiryDraft()))return toolResult(submitCurrentInquiry());
-      if(!window.confirm(`请确认提交当前可见的“${form.title}”表单给 ${site.name}？演示环境只会生成浏览器本地回执。`)){
-        setStatus('您已取消提交，表单仍可修改。','ready');
-        return toolResult({status:'cancelled',message:'用户取消提交，本次未生成询价记录。'});
-      }
-      return toolResult(submitCurrentInquiry());
-    }
-  }];
+  if(route.view==='quote'&&form.webmcp)return formToolDefinitions({
+    fillName:'request_quote',submitName:'submit_quote',
+    fillDescription:`填写${site.name}本页“${form.title}”表单，供用户在页面核对；本工具不提交询价。`,
+    submitDescription:`用户已核对${site.name}当前“${form.title}”表单并明确要求提交后调用。使用页面当前值，要求用户在浏览器确认，调用原提交处理，并返回实际结果与回执；不要在预填后自动调用。`
+  });
   return [];
 }
 async function registerTools(){
@@ -358,7 +455,7 @@ async function registerTools(){
   registered=[];toolController=null;
   const badge=$('#tool-badge');
   const definitions=toolDefinitions();
-  if(!definitions.length){badge.className='tool-badge neutral';badge.innerHTML='<span class="badge-dot"></span>发现与理解 · 0 tools';return;}
+  if(!definitions.length){badge.className='tool-badge neutral';badge.innerHTML='<span class="badge-dot"></span>本页无 WebMCP 工具';return;}
   if(!document.modelContext?.registerTool){
     const insecureNetworkHttp=location.protocol==='http:'&&!['localhost','127.0.0.1','[::1]'].includes(location.hostname);
     badge.className='tool-badge unsupported';
@@ -375,9 +472,11 @@ async function registerTools(){
   }catch(error){if(serial!==registerSerial)return;controller.abort();registered=[];badge.className='tool-badge unsupported';badge.innerHTML='<span class="badge-dot"></span>WebMCP 注册失败';badge.title=String(error?.message||error);console.error('WebMCP registerTool failed',error);}
 }
 
+const goodyPages=isGoody?createGoodyPages({$,e,icon,route,pageUrl,product,form,lead,promptPanel,wirePromptCopy,fieldMarkup,wireQuoteForm,formToolDefinitions,toolResult,navigateAfterResult,readOnlyAnnotations,navigationAnnotations,setSelectedProduct:id=>{selectedSearchProductId=id;refreshManualExamples();}}):null;
 renderShell();
-if(route.view==='compare')renderCompare();
-if(route.view==='products')renderProducts();
-if(route.view==='detail')renderDetail();
-if(route.view==='quote')renderQuote();
+if(route.view==='discover')renderDiscover();
+else if(isGoody)goodyPages.render();
+else if(route.view==='products')renderProducts();
+else if(route.view==='detail')renderDetail();
+else if(route.view==='quote')renderQuote();
 registerTools();

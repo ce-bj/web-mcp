@@ -2,17 +2,23 @@
 
 这是企业网站中台的 WebMCP 询价场景产品设计及可交互原型。买家 Agent 在官网查找产品、打开详情、查询规格和交期，再进入现有询价表单辅助填写；买家核对后可自行提交，也可授权 Agent 提交并获取回执。项目版本处于 **0.x**，当前产品设计文档为 v0.22。
 
+另有**一期固定演示**：以顾地科技为对象，从“多家公司中找到顾地”开始，演示公司确认、产品查找、规格咨询到留资提交的全流程，需求见 [`webmcp-phase1-goody-demo.md`](./webmcp-phase1-goody-demo.md)。
+
 ## 项目结构
 
 | 路径                                                                                                         | 内容                                 |
 | ---------------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | [`index.html`](./index.html)                                                                               | 前台演示的根目录入口，直接加载页面与 WebMCP 工具       |
 | [`webmcp-inquiry-product-design.md`](./webmcp-inquiry-product-design.md)                                   | 产品设计：目标与边界、流程、后台配置、工具字段、异常和验收示例    |
+| [`webmcp-phase1-goody-demo.md`](./webmcp-phase1-goody-demo.md)                                             | 一期固定演示需求：顾地科技全流程、页面与工具定义、演示脚本、验收与落地事项 |
 | [`webmcp-inquiry-product-design.assets/`](./webmcp-inquiry-product-design.assets/)                         | 产品文档引用的现有后台与表单截图                   |
 | [`background/b2b-agent-ready-webmcp-standalone.html`](./background/b2b-agent-ready-webmcp-standalone.html) | 业务背景参考；本项目重点对应其中第 04 部分            |
-| [`demo/index.html`](./demo/index.html)                                                                     | 前台演示入口：两家模拟官网、产品咨询和询价流程            |
+| [`demo/index.html`](./demo/index.html)                                                                     | 前台演示入口：模拟搜索、顾地模拟官网及两家通用需求原型      |
 | [`demo/admin.html`](./demo/admin.html)                                                                     | 后台配置原型：属性模板、产品编辑与 form 的 WebMCP 设置 |
 | [`demo/catalog.js`](./demo/catalog.js)                                                                     | 演示产品、表单数据及由当前页面数据生成 Schema 的逻辑     |
+| [`demo/discovery.js`](./demo/discovery.js)                                                                 | 一期演示：7 家候选公司、顾地发现层信号（现状/修正后）与模拟搜索 |
+| [`demo/goody-data.js`](./demo/goody-data.js)                                                               | 一期演示：顾地公司信息、产品、规格表与两张表单定义          |
+| [`demo/goody-views.js`](./demo/goody-views.js)                                                             | 一期演示：顾地 6 类页面与 9 项 WebMCP 工具                  |
 | [`demo/app.js`](./demo/app.js)                                                                             | 前台页面渲染、WebMCP 工具注册、预填与本地提交回执       |
 | [`demo/submission.js`](./demo/submission.js)                                                               | 前台手动提交与 WebMCP 提交共用的本地回执保存逻辑       |
 | [`demo/admin.js`](./demo/admin.js)                                                                         | 后台原型交互与当前浏览器的配置保存                  |
@@ -32,7 +38,11 @@ python3 -m http.server 8765
 
 | 要进入的页面 | 浏览器地址 |
 | --- | --- |
-| 首页：选择两家模拟官网 | [http://localhost:8765/](http://localhost:8765/) |
+| 首页：多家公司 · 发现与选择 | [http://localhost:8765/](http://localhost:8765/) |
+| 同上，顾地发现层用现状快照对比 | [http://localhost:8765/?view=discover&meta=current](http://localhost:8765/?view=discover&meta=current) |
+| 顾地科技：官网首页 | [http://localhost:8765/?view=home&site=goody](http://localhost:8765/?view=home&site=goody) |
+| 顾地科技：产品详情（含产品咨询表单） | [http://localhost:8765/?view=detail&site=goody&product=pvcu-uh-water](http://localhost:8765/?view=detail&site=goody&product=pvcu-uh-water) |
+| 顾地科技：在线留言 | [http://localhost:8765/?view=message&site=goody](http://localhost:8765/?view=message&site=goody) |
 | 澄川管业：所有产品 | [http://localhost:8765/?view=products&site=pipe](http://localhost:8765/?view=products&site=pipe) |
 | 澄川管业：产品详情 | [http://localhost:8765/?view=detail&site=pipe&product=pipe-315](http://localhost:8765/?view=detail&site=pipe&product=pipe-315) |
 | 澄川管业：在线询价 | [http://localhost:8765/?view=quote&site=pipe&product=pipe-315](http://localhost:8765/?view=quote&site=pipe&product=pipe-315) |
@@ -44,19 +54,23 @@ python3 -m http.server 8765
 
 把**整个仓库目录**放到 Nginx 网站根目录，确保同一目录下有 `index.html` 和 `demo/`。例如部署在 `/var/www/web-mcp` 时，Nginx 的 `root` 指向 `/var/www/web-mcp`，`index` 使用 `index.html`；无需运行 Python 服务、Vite 或构建 `dist/`。访问 `https://你的域名/` 进入首页，访问 `https://你的域名/demo/admin.html` 进入后台配置原型。浏览器打开根目录页面后，样式和脚本还会从 `/demo/` 加载，因此部署时不能只上传单独的 `index.html`。线上要使用 WebMCP 工具，还需要 HTTPS 与下文所述的浏览器启用条件。
 
-前台两家官网及后台页面均为**模拟数据与原型**。后台设置保存在浏览器 `localStorage`，尚未连接真实中台，也不会实时改变前台工具。询价提交同样只写入浏览器本地存储，不发送给真实企业。产品文档描述的是中台应实现的业务规则，原型用于验证交互和当前页面工具定义；文档中的示意字段标识、截图商品与原型测试数据不必完全相同。
+前台官网、搜索结果及后台页面均为**模拟数据与原型**。后台设置保存在浏览器 `localStorage`，尚未连接真实中台，也不会实时改变前台工具。询价提交同样只写入浏览器本地存储，不发送给真实企业。产品文档描述的是中台应实现的业务规则，原型用于验证交互和当前页面工具定义；文档中的示意字段标识、截图商品与原型测试数据不必完全相同。
 
 ## 体验与验证
 
-前台的“官网选择”页模拟发现与理解；进入任一模拟官网后，当前产品列表、详情或询价页才注册相应的 WebMCP 工具。`request_quote` 只预填，`submit_quote` 在用户核对并明确授权后请求页面确认、提交当前表单并返回回执；手动提交仍可用。页面右上角只有在实际注册成功后才显示工具数量。若本地 Chrome 尚未开放 WebMCP，先启用 `chrome://flags/#enable-webmcp-testing` 并重启浏览器，再使用 **WebMCP - Model Context Tool Inspector**；服务器部署的启用条件见下文。WebMCP 未启用时仍可手动浏览和填写表单。
+首页是模拟搜索页，注册 `search_suppliers`、`inspect_supplier`、`open_supplier_site` 三项演示外壳工具；进入官网后，各页面再注册该站的 WebMCP 工具。`request_quote` 只预填，`submit_quote` 在用户核对并明确授权后请求页面确认、提交当前表单并返回回执；手动提交仍可用。页面右上角只有在实际注册成功后才显示工具数量。若本地 Chrome 尚未开放 WebMCP，先启用 `chrome://flags/#enable-webmcp-testing` 并重启浏览器，再使用 **WebMCP - Model Context Tool Inspector**；服务器部署的启用条件见下文。WebMCP 未启用时仍可手动浏览和填写表单。
 
 Inspector 的聊天框与下方 **Tool / Input Arguments / Execute Tool** 是两种操作。聊天框找到了产品，不会自动替下方手动执行框填入参数；其中的 `"keyword":"example_string"` 是占位值，直接执行只会搜索这个英文词。每个前台页面右侧都列出当前工具可复制的 JSON。手动执行时，先在 Inspector 选择同名 Tool，再复制参数到 **Input Arguments**。切换页面或修改商品行后，重新读取当前页工具和参数。
 
-### 主流程：市政排水管材
+### 一期固定演示：顾地科技
+
+从首页（模拟搜索）开始，按每页右侧“本页提问脚本”依次提问，完整脚本、预期调用与验收标准见 [`webmcp-phase1-goody-demo.md`](./webmcp-phase1-goody-demo.md) 第 8、9 节。关键检查点：有表单的页面直接留资，没有表单的页面由 Agent 跳转到在线留言页再留资；搜索排序顾地第一；详情页 dn110 × 1.6MPa 查表得 6.6 mm；价格、交期不编造并引导留资；`request_quote` 只预填，`submit_quote` 页面确认后返回回执。点击首页的“现状快照”可演示发现层不修正时顾地排第 4。
+
+### 通用需求原型：市政排水管材
 
 | 步骤 | 当前页 | 输入给 Inspector 的话 | 预期 |
 | --- | --- | --- | --- |
-| 1 | 两家官网 | 我要找市政排水用双壁波纹管，DN315、SN8，大约 1200 米。比较这两个官网简介，告诉我应该先进入哪家官网。 | 基于可见简介选择澄川管业；此页无 WebMCP 工具 |
+| 1 | 首页（模拟搜索） | 换一个需求：我要找市政排水用 HDPE 双壁波纹管 DN315、SN8，大约 1200 米。哪家更合适？ | `search_suppliers` 把澄川管业排第一；用户确认后 `open_supplier_site` 进入 |
 | 2 | 澄川管业 → 所有产品 | 你们有适合市政排水用的 DN315、SN8 双壁波纹管吗？ | `search_products` 找到产品并询问是否打开 |
 | 3 | 同一产品列表 | 好，打开这款产品的详情。 | `open_product_detail` 打开详情页 |
 | 4 | 产品详情 | 这款产品的公称直径、环刚度和执行标准是什么？ | `get_product_spec({})` 返回当前产品的已开放规格 |
@@ -100,6 +114,7 @@ node --test demo/*.test.mjs
 node --check demo/app.js
 node --check demo/submission.js
 node --check demo/admin.js
+node --check demo/goody-views.js
 ```
 
 本项目没有构建步骤。演示覆盖主流程；关闭开关、字段缺值及故障等异常的产品规则和验收场景见独立的[产品设计文档](./webmcp-inquiry-product-design.md)。
@@ -114,4 +129,4 @@ node --check demo/admin.js
 
 **希望访问者不手动开测试开关：**&#x6309; [Chrome WebMCP 文档](https://developer.chrome.com/docs/ai/webmcp/)申请当前 HTTPS 域名的 WebMCP Origin Trial，并按照 [Origin Trial 接入说明](https://developer.chrome.com/docs/web-platform/origin-trials)把该域名的有效 token 放入每个需要使用工具的页面的 `Origin-Trial` 响应头，或放入该页面 `<head>` 的 `<meta http-equiv="origin-trial" content="实际申请的 TOKEN">`。本演示的根目录 `index.html` 与 `demo/index.html` 都会注册工具，后台 `demo/admin.html` 不注册工具。Token 需要与访问页面的 origin 匹配；不能把示例占位字符串直接上传。Inspector 本身仍是开发测试工具，应按其文档使用支持的 Chrome 与测试开关。
 
-在目标页面的 Chrome DevTools Console 输入 `location.origin` 和 `typeof document.modelContext?.registerTool`：先确认访问的是 HTTPS 或本机 localhost；后者返回 `"function"` 才说明当前页面有注册接口。返回 `"undefined"` 时依次检查地址是否为安全上下文、浏览器版本、flag 或 Origin Trial token。接口可用后，本站产品列表页右上角应显示 `2 WebMCP tools ready`，详情页显示 3 项，询价页显示 2 项；“官网选择”页本来就没有工具。
+在目标页面的 Chrome DevTools Console 输入 `location.origin` 和 `typeof document.modelContext?.registerTool`：先确认访问的是 HTTPS 或本机 localhost；后者返回 `"function"` 才说明当前页面有注册接口。返回 `"undefined"` 时依次检查地址是否为安全上下文、浏览器版本、flag 或 Origin Trial token。接口可用后，模拟搜索页右上角应显示 `3 WebMCP tools ready`；顾地产品详情页 7 项，首页和在线留言页各 6 项，关于、联系、产品中心各 4 项（见一期文档 4.2 总表）；通用需求原型的产品列表页 2 项、详情页 3 项、询价页 2 项。
