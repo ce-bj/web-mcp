@@ -1,8 +1,10 @@
 # WebMCP 一期固定演示：流程、服务与实现
 
-- 版本：v0.7
-- 日期：2026-11-10
-- 演示对象：顾地科技演示站 <https://endemo.xuoumaill.cn/>
+- 版本：v0.8
+- 日期：2026-11-11
+- 演示站：
+  - **演示站一：顾地科技** <https://endemo.xuoumaill.cn/>（主线演示，本仓库有可运行模拟）
+  - **演示站二：北京中企变压器** <https://cndemo.xuoumaill.cn/>（同一建站平台，按同样规则接入，见 [4.4](#cndemo)）
 - 本仓库可运行的模拟：`index.html?view=discover`（模拟搜索）→ `index.html?view=home&site=goody`（顾地模拟官网）
 
 > **范围标识**：本文中标 **【网站开发】** 的是一期要在官网上开发的 WebMCP 服务；标 **【演示外壳 · 不开发】** 的是“从多家公司中发现顾地”的模拟，只在本仓库演示用，代表搜索引擎或 Agent 自身的检索，**不属于网站要开发的 WebMCP**；标 **【站点内容】** 的是演示前要由运营修正的站点设置，不需要开发 WebMCP。
@@ -26,12 +28,12 @@
 
 ## 1. 定位：与通用产品需求的区别
 
-本文是**一期固定演示需求**：用顾地科技一家企业、固定的页面和数据，向外部演示“Agent 找到企业 → 指定产品 → 咨询 → 留资”的完整流程。它不替代[通用产品需求](./webmcp-inquiry-product-design.md)。
+本文是**一期固定演示需求**：以顾地科技（endemo）为主线、北京中企变压器（cndemo）为第二个站点，用固定的页面和数据，向外部演示“Agent 找到企业 → 指定产品 → 咨询 → 留资”的完整流程。它不替代[通用产品需求](./webmcp-inquiry-product-design.md)。
 
 | 比较项 | 通用产品需求（v0.22） | 一期固定演示（本文） |
 |---|---|---|
-| 目的 | 中台为所有企业站点生成 WebMCP 工具的产品规则 | 用一家企业把全流程演示出来 |
-| 范围 | 后台属性模板、form 表单 WebMCP Tab、多行业多表单 | 顾地一个站点，页面、工具、数据固定 |
+| 目的 | 中台为所有企业站点生成 WebMCP 工具的产品规则 | 用两个演示站把全流程演示出来 |
+| 范围 | 后台属性模板、form 表单 WebMCP Tab、多行业多表单 | endemo、cndemo 两个站点，页面、工具、表单固定 |
 | 起点 | 智能体已进入官网 | 演示从多家公司中发现顾地开始；**发现环节是演示外壳，不开发** |
 | 产品资料 | 属性模板结构化字段，`get_product_spec(fieldKeys)` | 顾地详情页是富文本加规格表，用 `get_product_detail` 返回 |
 | 交期 | `check_lead_time` 读取交货期属性 | 顾地未公开交期，不提供该工具；查不到的问题引导留资 |
@@ -138,7 +140,7 @@ flowchart TD
 
 ### 4.3 逐个 WebMCP：功能与所在页面
 
-每个工具先说明功能（能做什么、用户怎么问、怎么调用），再列出它应该出现在哪些页面。调用示例中的分类 ID、产品 ID 按真实站写（如 `"3"`、`"51"`）；本仓库模拟中对应为 `water`、`pvcu-uh-water`。完整定义见第 6 节，页面与工具的对照见 4.2。
+每个工具先说明功能（能做什么、用户怎么问、怎么调用），再列出它应该出现在哪些页面：先写 endemo（顾地），再写 cndemo（北京中企变压器，详见 4.4）。调用示例中的分类 ID、产品 ID 按真实站写（如 `"3"`、`"51"`）；本仓库模拟中对应为 `water`、`pvcu-uh-water`。完整定义见第 6 节，页面与工具的对照见 4.2。
 
 **页面网址一览**（下文“所在页面”按此称呼）
 
@@ -165,6 +167,8 @@ flowchart TD
 
 **所在页面**：全部官网页面——首页、关于顾地、公司简介、联系我们、产品中心 / 分类、产品详情、在线留言、其他。在关于顾地、公司简介、联系我们三页，它是页面的主要工具。
 
+cndemo：全部页面；内容取自 `/1-about.html`、`/qualifications.html`、`/1-technology.html`、`/1-service.html`、`/1-contact.html`。
+
 #### 4.3.2 search_products：查找产品
 
 **功能**：按关键词（名称、材质、用途）、产品分类、页码查找已发布产品，每页 6 条，返回名称、分类、概要、详情链接。规格参数（dn、压力）不参与检索。有结果时引导 Agent 先介绍候选、用户确认后再打开；无结果时引导换关键词，或询问用户是否留下需求。只读。
@@ -178,6 +182,8 @@ flowchart TD
 
 **所在页面**：全部官网页面。在产品分类页（如 `/products_list_1/3.html`）未指定分类时，默认限定当前分类；在产品中心页调用时，页面列表同步显示结果。
 
+cndemo：全部页面；产品列表页为 `/2-products.html`、`/Product.html`。
+
 #### 4.3.3 open_product_detail：打开产品详情
 
 **功能**：用户确认要看某款产品后，跳转到该产品的详情页。只接受 `search_products` 返回的产品 ID，执行前校验产品已发布、可访问；先返回 `opening` 再跳转。
@@ -188,6 +194,8 @@ flowchart TD
 | 打开刚才那款 PE 燃气管看看。 | `{"productId":"<search_products 返回的 ID>"}` |
 
 **所在页面**：全部官网页面。
+
+cndemo：全部页面。
 
 #### 4.3.4 open_site_page：打开固定页面
 
@@ -201,6 +209,8 @@ flowchart TD
 
 **所在页面**：全部官网页面。其中首页、关于顾地、公司简介、联系我们、产品中心 / 分类、其他页面会带上“跳转留资”的引导；产品详情、在线留言有自己的留资表单，不带此引导。
 
+cndemo：全部页面；固定页面为 home=`/`、company=`/1-about.html`、products=`/2-products.html`、contact 与 message 都是 `/1-contact.html`。除产品详情和 `/1-contact.html` 外都带“跳转留资”的引导。
+
 #### 4.3.5 get_product_detail：读取当前产品资料
 
 **功能**：读取当前详情页产品的概要、简介、特点、应用领域、参数、规格表和认证；规格表按行（公称外径）列（公称压力）返回，Agent 查表回答，不推算。价格、交期、库存不公开，放在 `notProvided` 中，并引导用户用 `request_quote` 留资。只读。
@@ -213,6 +223,8 @@ flowchart TD
 
 **所在页面**：只在产品详情页（`/product_detail/{id}.html`）。
 
+cndemo：只在产品详情页 `/Product_detail/{id}.html`、`/1-product_detail/{id}.html`。
+
 #### 4.3.6 request_quote：预填产品咨询表单
 
 **功能**：把用户的联系方式和需求填进详情页“产品咨询”表单，咨询产品由“相关项”自动关联为当前产品；只填写、不提交，填完把表单滚动到可见位置，返回 `awaiting_user_confirmation`。电话、邮箱、详细说明必填，缺失时 Agent 先询问，不编造。
@@ -222,6 +234,8 @@ flowchart TD
 | 帮我留资咨询：dn110、1.6MPa 约 2000 米，项目在湖北武汉，希望 12 月中旬供货，请确认价格、交期并提供检测报告。联系人王宁，电话 13800138000，邮箱 wang.ning@example.com。 | `{"contactName":"王宁","phone":"13800138000","email":"wang.ning@example.com","region":"湖北武汉","inquiryContent":"dn110、1.6MPa 约 2000 米，项目在湖北武汉，希望 12 月中旬供货。请确认价格、交期并提供检测报告。"}` |
 
 **所在页面**：只在产品详情页。
+
+cndemo：只在产品详情页，绑定 “Get in touch” 表单 `e_form-39`（First Name、Last Name、Email、Message）。该表单不自动关联产品，工具把当前产品名称写在 Message 开头。参数见 4.4.2。
 
 #### 4.3.7 submit_quote：提交产品咨询
 
@@ -233,6 +247,8 @@ flowchart TD
 
 **所在页面**：只在产品详情页。
 
+cndemo：只在产品详情页（`e_form-39`）。
+
 #### 4.3.8 request_message：预填留资表单
 
 **功能**：用户有采购需求、合作、代理经销、工程项目或售后等事项（不针对某款产品）要留下联系方式时，填写在线留言页的“在线留言”表单；只填写、不提交。电话、邮箱、留言内容必填，缺失时先询问。
@@ -242,6 +258,8 @@ flowchart TD
 | 在线留言 | “在线留言”`e_form-11` | contactName、phone\*、email\*、message\* | 帮我留言：想了解工程项目合作和经销政策。联系人王宁，电话 13800138000，邮箱 wang.ning@example.com。 | `{"contactName":"王宁","phone":"13800138000","email":"wang.ning@example.com","message":"想了解工程项目合作和经销政策"}` |
 
 **所在页面**：只在在线留言页。其他页面不注册，由 `open_site_page` 跳到在线留言页后使用。
+
+cndemo：只在联系我们 `/1-contact.html`，绑定「立即咨询 · 获取工艺方案」表单 `e_form-18`；参数与 endemo 不同（多了公司名称、反馈类型，且有条款协议），见 4.4.3。
 
 #### 4.3.9 submit_message：提交留资表单
 
@@ -253,7 +271,105 @@ flowchart TD
 
 **所在页面**：只在在线留言页。
 
-### 4.4 不开发的部分
+cndemo：只在 `/1-contact.html`。提交前条款协议必须由用户本人勾选，未勾选返回 `validation_error`。
+
+<a id="cndemo"></a>
+
+### 4.4 演示站二：cndemo.xuoumaill.cn（北京中企变压器）
+
+cndemo 与 endemo 在同一建站平台，WebMCP 运行时、9 项工具和接入规则相同，只是页面、表单和站点配置不同。本仓库的可运行模拟只覆盖顾地（endemo）。以下页面类型（`pageObj.filename`）和表单均于 2026-11-11 从线上页面读取。
+
+#### 4.4.1 页面与 WebMCP
+
+公共 4 项 = `get_company_info`、`search_products`、`open_product_detail`、`open_site_page`。
+
+| 页面 | 网址 | `pageObj.filename` | 页面上的表单 | WebMCP | 数量 |
+|---|---|---|---|---|---|
+| 首页（英文模板） | <https://cndemo.xuoumaill.cn/> | `Home` | “Get in touch” `e_form-1`（不接入） | 公共 4 项 | 4 |
+| 中文首页 | <https://cndemo.xuoumaill.cn/1-homepage.html> | `1-homepage` | 无 | 公共 4 项 | 4 |
+| 关于我们 | <https://cndemo.xuoumaill.cn/1-about.html> | `1-about` | 无 | 公共 4 项 | 4 |
+| 荣誉资质 | <https://cndemo.xuoumaill.cn/qualifications.html> | `qualifications` | 无 | 公共 4 项 | 4 |
+| 产品中心 | <https://cndemo.xuoumaill.cn/2-products.html>、<https://cndemo.xuoumaill.cn/Product.html> | `2-products`、`Product` | `Product` 页有 `e_form-1`（不接入） | 公共 4 项 | 4 |
+| **产品详情** | <https://cndemo.xuoumaill.cn/Product_detail/16.html>、<https://cndemo.xuoumaill.cn/1-product_detail/9.html> | `Product_detail` | **“Get in touch” `e_form-39`（接入）**；页脚 `e_form-1`（不接入） | 公共 4 项 + `get_product_detail` + `request_quote` · `submit_quote` | 7 |
+| 智能选配报价 | <https://cndemo.xuoumaill.cn/1-configurator.html> | `1-configurator` | 选型器 `e_form-30`（零件类型、加工材料、精度、年产量；不接入，二期可做设备推荐工具） | 公共 4 项 | 4 |
+| 技术创新 / 服务支持 | <https://cndemo.xuoumaill.cn/1-technology.html>、<https://cndemo.xuoumaill.cn/1-service.html> | `1-technology`、`1-service` | 无 | 公共 4 项 | 4 |
+| 案例中心 | <https://cndemo.xuoumaill.cn/cases.html> | `cases` | 无 | 公共 4 项 | 4 |
+| 新闻中心 | <https://cndemo.xuoumaill.cn/4-news.html> | `4-news` | 订阅表单 `e_form-5`（只填邮箱；不接入） | 公共 4 项 | 4 |
+| **联系我们（中文）** | <https://cndemo.xuoumaill.cn/1-contact.html> | `1-contact` | **「立即咨询 · 获取工艺方案」`e_form-18`（接入）** | 公共 4 项 + `request_message` · `submit_message` | 6 |
+| 英文页面 | Services、About、FAQ、Blog、Contact（如 <https://cndemo.xuoumaill.cn/Contact.html>） | 同名 | 多数有 `e_form-1`（不接入） | 公共 4 项 | 4 |
+
+与 endemo 一致：只接入**产品详情**和**留言（联系我们）**两张表单；其他页面上的表单（全站 “Get in touch”、选型器、订阅）一期都不接入，用户要留资时由 `open_site_page` 跳到 `/1-contact.html`。
+
+`open_site_page` 在 cndemo 的固定页面：
+
+| page | 网址 |
+|---|---|
+| home | `/` |
+| company | `/1-about.html` |
+| products | `/2-products.html` |
+| contact | `/1-contact.html` |
+| message | `/1-contact.html`（与 contact 同页） |
+
+#### 4.4.2 request_quote（cndemo 产品详情 `e_form-39`）
+
+```json
+{"type":"object","properties":{
+  "firstName":{"type":"string","description":"名：First Name"},
+  "lastName":{"type":"string","description":"姓：Last Name"},
+  "email":{"type":"string","format":"email","description":"联系邮箱：Email"},
+  "message":{"type":"string","description":"咨询内容：规格、数量、用途、期望交期，以及需要确认的价格、交期等问题"}
+},"required":[],"additionalProperties":false}
+```
+
+| 参数 | 组件 | 页面占位 |
+|---|---|---|
+| firstName | `e_clueName-47` | First Name |
+| lastName | `e_clueName-46` | Last Name |
+| email | `e_clueEmail-48` | Email |
+| message | `e_textarea-49` | Message... |
+
+- 该表单在页面上**没有标必填**，`required` 按已发布定义为空。建议运营把 Email、Message 设为必填，届时 `required` 自动变为 `["email","message"]`。
+- 表单**不关联产品**（没有“相关项”组件），`request_quote` 在 `message` 开头自动写入“咨询产品：{当前产品名称}”，以便销售识别。
+
+#### 4.4.3 request_message（cndemo 联系我们 `e_form-18`）
+
+```json
+{"type":"object","properties":{
+  "contactName":{"type":"string","description":"您的姓名"},
+  "company":{"type":"string","description":"公司名称"},
+  "phone":{"type":"string","description":"联系电话"},
+  "email":{"type":"string","format":"email","description":"电子邮箱"},
+  "feedbackType":{"type":"string","enum":["来件试切申请","工艺方案咨询","产品选型","预约看机","技术支持"],"description":"反馈类型"},
+  "message":{"type":"string","description":"详细反馈：加工需求、零件与材料、数量、期望时间等"}
+},"required":["contactName","phone","email","feedbackType","message"],"additionalProperties":false}
+```
+
+| 参数 | 组件 | 必填 |
+|---|---|---|
+| contactName | `e_input-30` 您的姓名 | 是 |
+| company | `e_input-29` 公司名称 | 否 |
+| phone | `e_input-33` 联系电话 | 是 |
+| email | `e_input-32` 电子邮箱 | 是 |
+| feedbackType | `e_cardLabel-22` 反馈类型 | 是（单选或多选以表单定义为准，需确认） |
+| message | `e_textarea-24` 详细反馈 | 是 |
+| —（不作为参数） | `e_agreement-25` 条款协议 | 是 |
+
+- **条款协议**不作为工具参数，Agent 不能代用户勾选。`request_message` 填完后返回 `awaiting_user_confirmation`，并提示“请用户阅读并勾选条款协议”；`submit_message` 发现未勾选时返回 `validation_error`。
+- 提交成功跳转 `/successfully1.html`，处理方式同 7.6。
+
+#### 4.4.4 cndemo 站点内容问题【站点内容】
+
+| 信号 | 现状（2026-11-11） | 建议 |
+|---|---|---|
+| JSON-LD Organization | name 为“中企一家专业的建站公司”，alternateName“中企动力” | 改为北京中企变压器有限公司 |
+| meta keywords | cellulose film, outdoor patio furniture 等无关词 | 改为断路器、变压器、CNC 加工等主营词 |
+| meta / og description | 断路器与“光学影像测量仪、二次元”混写，内容重复 | 按主营重写一段 |
+| 产品 | “家用挤水拖把桶”“Product Demo 1”等测试产品；llms.txt 分类名为“Eyes（Get backend category name）” | 下线测试产品，修正分类名 |
+| 联系方式 | 邮箱 `account@mail.com` 为占位 | 改为真实邮箱 |
+| 页面结构 | 英文页（Product、Contact…）与中文页（2-products、1-contact…）两套并存，`/1-OEM.html` 返回空页面 | 演示前确认主导航用哪套；修复空页面 |
+| 访问 | 内置浏览器打开根地址时被跳转到 endemo（疑似按语言跳转），直接请求返回正常 | 需确认跳转规则，避免演示时跳错站 |
+
+### 4.5 不开发的部分
 
 | 内容 | 性质 | 说明 |
 |---|---|---|
@@ -533,6 +649,8 @@ flowchart LR
 | `message` | `/message.html`（`/Message.html` 同页） | 公共 4 项 + `request_message`、`submit_message`（本页 `e_form-11`） |
 | 其他 | 新闻、案例、投资者等 | 公共 4 项（无表单，留资经 `open_site_page` 跳转） |
 
+cndemo 的页面类型与工具见 4.4.1，同一运行时按站点配置区分两个站。
+
 留资工具**只按页面上实际存在、已开启 WebMCP 的表单**注册，每页最多一组；页面上没有表单就不注册留资工具，运行时把 `open_site_page` 的描述和公共工具的引导文字切换为“跳转到在线留言页留资”（见 6.4）。表单与工具名的对应关系由站点配置指定（见 7.4）。
 
 ### 7.4 站点 WebMCP 配置
@@ -557,6 +675,20 @@ flowchart LR
   "leadFallbackPage": "message"
 }
 </script>
+```
+
+cndemo 用同样结构的另一份配置（节选）：
+
+```json
+{
+  "pages": { "home":"/", "company":"/1-about.html", "contact":"/1-contact.html",
+             "products":"/2-products.html", "message":"/1-contact.html" },
+  "forms": {
+    "e_form-39": { "page":"Product_detail", "fill":"request_quote", "submit":"submit_quote", "prefixProductName": true, … },
+    "e_form-18": { "page":"1-contact", "fill":"request_message", "submit":"submit_message", "agreement":"e_agreement-25", … }
+  },
+  "leadFallbackPage": "message"
+}
 ```
 
 - `company` 的内容取自“关于顾地”“联系我们”页面，一期人工整理一次（模拟实现见 `demo/goody-data.js` 的 `companyTopics`）。
@@ -785,6 +917,7 @@ addEventListener('pagehide', () => controller.abort());
 | A03 | 确认后跳转 | 只有用户确认后才调用 `open_supplier_site`、`open_product_detail`；只出现在搜索结果中的候选返回 `not_available` | 演示外壳 / 网站开发 |
 | A04 | 工具随页面变化 | 与 4.2 总表一致：产品详情 7 项；在线留言 6 项；首页、关于、联系、产品列表等 4 项 | 网站开发 |
 | A04a | 每页有留资路径 | 产品详情、在线留言各有一组本页表单的留资工具；其他页面（含首页）不注册留资工具，Agent 按引导用 `open_site_page` 跳到在线留言页后完成留资 | 网站开发 |
+| A04c | cndemo 工具分布 | 与 4.4.1 一致：产品详情 7 项，`/1-contact.html` 6 项，其余页面 4 项；条款协议未勾选时 `submit_message` 返回 `validation_error` | 网站开发 |
 | A04b | 下一步引导 | 公司信息、无结果搜索、产品详情的返回 `message` 含 6.4 的引导；提交成功后不承诺回复时间 | 网站开发 |
 | A05 | 公司信息 | 支持按主题返回；非法主题返回 `validation_error` | 网站开发 |
 | A06 | 产品查找 | “PVC 给水管”命中 PVC-U/UH给水管；按分类过滤正确；分页 `hasMore` 正确 | 网站开发 |

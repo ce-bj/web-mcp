@@ -2,7 +2,7 @@
 
 这是企业网站中台的 WebMCP 询价场景产品设计及可交互原型。买家 Agent 在官网查找产品、打开详情、查询规格和交期，再进入现有询价表单辅助填写；买家核对后可自行提交，也可授权 Agent 提交并获取回执。项目版本处于 **0.x**，当前产品设计文档为 v0.22。
 
-另有**一期固定演示**：以顾地科技为对象，从“多家公司中找到顾地”开始，演示公司确认、产品查找、规格咨询到留资提交的全流程，需求见 [`webmcp-phase1-goody-demo.md`](./webmcp-phase1-goody-demo.md)。
+另有**一期固定演示**：以顾地科技（<https://endemo.xuoumaill.cn/>）为主线、北京中企变压器（<https://cndemo.xuoumaill.cn/>）为第二个演示站，从“多家公司中找到顾地”开始，演示公司确认、产品查找、规格咨询到留资提交的全流程，需求见 [`webmcp-phase1-goody-demo.md`](./webmcp-phase1-goody-demo.md)。本仓库的可运行模拟覆盖顾地。
 
 ## 项目结构
 
@@ -10,7 +10,7 @@
 | ---------------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | [`index.html`](./index.html)                                                                               | 前台演示的根目录入口，直接加载页面与 WebMCP 工具       |
 | [`webmcp-inquiry-product-design.md`](./webmcp-inquiry-product-design.md)                                   | 产品设计：目标与边界、流程、后台配置、工具字段、异常和验收示例    |
-| [`webmcp-phase1-goody-demo.md`](./webmcp-phase1-goody-demo.md)                                             | 一期固定演示需求：顾地科技全流程、页面与工具定义、演示脚本、验收与落地事项 |
+| [`webmcp-phase1-goody-demo.md`](./webmcp-phase1-goody-demo.md)                                             | 一期固定演示需求：endemo、cndemo 两个演示站的页面与工具、实现方案、演示脚本、验收 |
 | [`webmcp-inquiry-product-design.assets/`](./webmcp-inquiry-product-design.assets/)                         | 产品文档引用的现有后台与表单截图                   |
 | [`background/b2b-agent-ready-webmcp-standalone.html`](./background/b2b-agent-ready-webmcp-standalone.html) | 业务背景参考；本项目重点对应其中第 04 部分            |
 | [`demo/index.html`](./demo/index.html)                                                                     | 前台演示入口：模拟搜索、顾地模拟官网及两家通用需求原型      |
@@ -24,17 +24,59 @@
 | [`demo/admin.js`](./demo/admin.js)                                                                         | 后台原型交互与当前浏览器的配置保存                  |
 | [`demo/manual-examples.js`](./demo/manual-examples.js)                                                     | Inspector 手动执行时可复制的参数示例            |
 
-## 本地启动与进入页面
+## 安装与运行
 
-只需要 Python 3，无需安装依赖或执行构建。首次下载时，在终端运行：
+项目是纯静态网页，**没有依赖包、不需要构建**，用任意静态文件服务启动即可。
+
+### 环境要求
+
+| 软件 | 用途 | 是否必需 |
+| --- | --- | --- |
+| Python 3.8 及以上 | 用自带的 `http.server` 启动本地服务（只用标准库） | 必需（或用其他静态服务器代替） |
+| Google Chrome | 打开演示页面；要让 Agent 调用 WebMCP 工具，还需开启测试开关（见“部署后看不到 WebMCP 工具”） | 必需 |
+| Node.js 18 及以上 | 运行单元测试 | 可选 |
+
+检查是否已安装 Python：
 
 ```bash
-git clone https://github.com/ce-bj/web-mcp.git
+python3 --version
+```
+
+### 方式一：从源代码压缩包安装
+
+压缩包 `web-mcp-src-日期.zip` 只含源代码和文档，解压后得到 `web-mcp/` 文件夹。
+
+```bash
+unzip web-mcp-src-20261111.zip
+```
+
+```bash
 cd web-mcp
+```
+
+```bash
 python3 -m http.server 8765
 ```
 
-如果已经下载项目，先 `cd` 到**同时包含 `README.md`、根目录 `index.html` 和 `demo/` 文件夹**的目录，再运行 `python3 -m http.server 8765`。终端出现 `Serving HTTP on ... port 8765` 后，保持该终端运行，在浏览器打开下面的地址。不要在 `demo/` 文件夹内启动根目录服务；如果旧服务已占用 8765 端口，先在旧终端按 `Ctrl+C`，再从项目根目录启动。
+Windows 可以右键压缩包“全部解压缩”，再在 `web-mcp` 文件夹中打开 PowerShell，运行 `py -m http.server 8765`（或 `python -m http.server 8765`）。
+
+### 方式二：从 Git 仓库获取
+
+```bash
+git clone https://github.com/ce-bj/web-mcp.git
+```
+
+```bash
+cd web-mcp
+```
+
+```bash
+python3 -m http.server 8765
+```
+
+### 打开页面
+
+终端出现 `Serving HTTP on ... port 8765` 后，保持该终端运行，用 Chrome 打开下面的地址。服务必须在**同时包含 `README.md`、根目录 `index.html` 和 `demo/` 文件夹**的目录启动，不要在 `demo/` 里启动；请通过 HTTP 地址访问，不要直接双击 HTML 文件（页面使用 ES modules）。
 
 | 要进入的页面 | 浏览器地址 |
 | --- | --- |
@@ -48,7 +90,23 @@ python3 -m http.server 8765
 | 澄川管业：在线询价 | [http://localhost:8765/?view=quote&site=pipe&product=pipe-315](http://localhost:8765/?view=quote&site=pipe&product=pipe-315) |
 | 后台配置原型 | [http://localhost:8765/demo/admin.html](http://localhost:8765/demo/admin.html) |
 
-也可以只打开首页，使用页面左侧导航切换产品、详情与询价页面，或点右上角「后台配置」。启动命令运行的终端按 `Ctrl+C` 可停止服务。如果 8765 端口被其他服务占用，可将命令中的 `8765` 改为 `8766`，访问地址中的端口也同步改为 `8766`。请通过 HTTP 服务访问，不要直接双击 HTML 文件；页面使用 ES modules 和 WebMCP 浏览器接口。
+也可以只打开首页，使用页面左侧导航切换页面，或点右上角「后台配置」。更新代码后如果页面没变，按 `Cmd + Shift + R`（Windows：`Ctrl + Shift + R`）强制刷新。
+
+### 停止服务与更换端口
+
+在运行服务的终端按 `Ctrl+C` 停止。如果 8765 端口被占用（提示 `Address already in use`），换一个端口启动，访问地址中的端口也同步修改：
+
+```bash
+python3 -m http.server 8766
+```
+
+### 运行测试（可选，需要 Node.js）
+
+在项目根目录运行：
+
+```bash
+node --test demo/*.test.mjs
+```
 
 ## 上传到服务器后
 
